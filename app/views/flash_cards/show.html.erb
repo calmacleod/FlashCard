@@ -1,0 +1,20 @@
+<div class="page" data-flash-card-request-id="<%= @flash_card_request.id %>">
+  <div class="headline">
+    <h1>Flash Card Job</h1>
+    <p class="meta">
+      Model: <%= @flash_card_request.model %> · PDF: <%= @flash_card_request.pdf_filename %>
+    </p>
+  </div>
+
+  <% if flash[:alert].present? %>
+    <div class="alert"><%= flash[:alert] %></div>
+  <% end %>
+
+  <div id="flash_card_request_<%= @flash_card_request.id %>">
+    <%= render "request_panel", flash_card_request: @flash_card_request, prompt_text: @prompt_text %>
+  </div>
+
+  <div class="actions">
+    <%= link_to "Generate another set", root_path %>
+  </div>
+</div>

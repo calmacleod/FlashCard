@@ -1,0 +1,79 @@
+<div class="page">
+  <div class="headline">
+    <h1>Flash Cards Builder</h1>
+    <p>Upload a PDF, add guidance, and get Anki-ready cards from your local model.</p>
+    <div class="actions">
+      <%= link_to "View Jobs", "/jobs", class: "btn" %>
+    </div>
+  </div>
+
+  <% if flash.now[:alert].present? %>
+    <div class="alert"><%= flash.now[:alert] %></div>
+  <% end %>
+
+  <div class="card">
+    <%= form_with url: flash_cards_path, method: :post, multipart: true, class: "form-grid" do |form| %>
+      <div>
+        <label for="pdf">PDF file</label>
+        <%= form.file_field :pdf, required: true %>
+      </div>
+
+      <div>
+        <label for="model">Ollama model</label>
+        <% if @available_models.present? %>
+          <%= form.select :model, options_for_select(@available_models, @default_model) %>
+          <div class="hint">Detected <%= @available_models.size %> local models.</div>
+        <% else %>
+          <%= form.text_field :model, value: @default_model %>
+          <div class="hint">No models detected. Enter a model name manually.</div>
+        <% end %>
+      </div>
+
+      <div>
+        <label for="embedding_model">Embedding model (for vectorization)</label>
+        <%= form.text_field :embedding_model, value: ENV.fetch("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text"), list: "ollama-models" %>
+        <datalist id="ollama-models">
+          <% Array(@available_models).each do |model_name| %>
+            <option value="<%= model_name %>"></option>
+          <% end %>
+        </datalist>
+        <div class="hint">
+          If you see “does not support embeddings”, pull an embedding model like <code>nomic-embed-text</code>.
+          Example: <code>ollama pull nomic-embed-text</code>.
+        </div>
+      </div>
+
+      <div>
+        <label for="notes">What does the PDF cover?</label>
+        <%= form.text_area :notes, rows: 6, placeholder: "Summarize the content, key terms, or any must-cover topics." %>
+      </div>
+
+      <div>
+        <label for="guidance">How should the cards be written?</label>
+        <%= form.text_area :guidance, rows: 6, placeholder: "Example: focus on definitions, include key formulas, keep answers short." %>
+      </div>
+
+      <div>
+        <%= form.submit "Generate Anki Cards", class: "btn" %>
+      </div>
+    <% end %>
+  </div>
+
+  <% if @recent_requests.any? %>
+    <div class="recent">
+      <h2>Recent requests</h2>
+      <ul>
+        <% @recent_requests.each do |request| %>
+          <li>
+            <strong>
+              <%= link_to request.pdf_filename, flash_card_path(request), class: "link" %>
+            </strong>
+            <span>
+              <%= request.model %> · <%= request.status %> · <%= request.created_at.strftime("%Y-%m-%d %H:%M") %>
+            </span>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+</div>

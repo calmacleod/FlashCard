@@ -1,0 +1,44 @@
+<% prompt_text = local_assigns[:prompt_text] || flash_card_request.prompt_text %>
+
+<% if flash_card_request.status == "completed" %>
+  <div class="card">
+    <p>
+      Copy the CSV below into a file (for example, <code>cards.csv</code>) and import into Anki.
+    </p>
+
+    <textarea rows="22"><%= flash_card_request.response_text %></textarea>
+  </div>
+  <div class="actions">
+    <%= link_to "Download CSV", flash_card_path(flash_card_request, format: :csv), class: "btn", data: { turbo: false } %>
+    <%= button_to "Retry generation", retry_flash_card_path(flash_card_request), method: :post, class: "btn" %>
+  </div>
+<% else %>
+  <div class="card">
+    <p><strong>Status:</strong> <%= flash_card_request.status %></p>
+    <p class="meta"><strong>Step:</strong> <%= flash_card_request.current_step.presence || "—" %></p>
+    <div class="progress">
+      <div class="progress-bar" style="width: <%= flash_card_request.progress %>%"></div>
+    </div>
+    <p class="meta">Progress: <%= flash_card_request.progress %>%</p>
+    <% if flash_card_request.status == "failed" && flash_card_request.error_message.present? %>
+      <p class="alert"><%= flash_card_request.error_message %></p>
+    <% end %>
+  </div>
+  <div class="actions">
+    <%= button_to "Retry generation", retry_flash_card_path(flash_card_request), method: :post, class: "btn" %>
+  </div>
+<% end %>
+
+<div class="card log-card">
+  <p><strong>Job log</strong></p>
+  <pre class="log-output"><%= flash_card_request.log_text.to_s %></pre>
+</div>
+
+<div class="card log-card">
+  <p><strong>Prompt used</strong></p>
+  <% if prompt_text.present? %>
+    <textarea rows="14" readonly><%= prompt_text %></textarea>
+  <% else %>
+    <p class="meta">Prompt not available for this request.</p>
+  <% end %>
+</div>
