@@ -1,8 +1,11 @@
 class FlashCardRequest < ApplicationRecord
-  STATUSES = %w[queued processing completed failed].freeze
+  STATUSES = %w[queued chunking awaiting_approval processing refining completed failed].freeze
   MAX_LOG_CHARS = 50_000
 
-  validates :pdf_filename, :model, :embedding_model, presence: true
+  has_many :flash_cards, dependent: :delete_all
+  has_many :flash_card_chunks, dependent: :delete_all
+
+  validates :pdf_filename, :model, presence: true
   validates :status, inclusion: { in: STATUSES }
 
   after_commit :broadcast_over_action_cable, on: [:create, :update]

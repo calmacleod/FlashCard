@@ -30,16 +30,31 @@
       </div>
 
       <div>
-        <label for="embedding_model">Embedding model (for vectorization)</label>
-        <%= form.text_field :embedding_model, value: ENV.fetch("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text"), list: "ollama-models" %>
+        <label for="embedding_model">Embedding model</label>
+        <%= form.text_field :embedding_model, value: ENV.fetch("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text"), list: "ollama-models", autocomplete: "off" %>
         <datalist id="ollama-models">
           <% Array(@available_models).each do |model_name| %>
             <option value="<%= model_name %>"></option>
           <% end %>
         </datalist>
         <div class="hint">
-          If you see “does not support embeddings”, pull an embedding model like <code>nomic-embed-text</code>.
-          Example: <code>ollama pull nomic-embed-text</code>.
+          Used for embedding/vector workflows. Typical choices: <code>nomic-embed-text</code>, <code>mxbai-embed-large</code>.
+        </div>
+      </div>
+
+      <div>
+        <label for="detail-slider">Detail level</label>
+        <div class="detail-slider">
+          <input id="detail-level-hidden" type="hidden" name="detail_level" value="medium" autocomplete="off">
+          <input id="detail-slider" type="range" min="1" max="3" step="1" value="2" aria-label="Detail level slider" autocomplete="off">
+          <div class="detail-slider__labels">
+            <span>LOW</span>
+            <span id="detail-label" class="detail-slider__current">MEDIUM</span>
+            <span>HIGH</span>
+          </div>
+          <div class="hint">
+            LOW = fewer cards, HIGH = as many as possible per section (within reasonable limits).
+          </div>
         </div>
       </div>
 
@@ -51,6 +66,12 @@
       <div>
         <label for="guidance">How should the cards be written?</label>
         <%= form.text_area :guidance, rows: 6, placeholder: "Example: focus on definitions, include key formulas, keep answers short." %>
+      </div>
+
+      <div>
+        <label for="chunking_hint">Chunking hint (optional)</label>
+        <%= form.text_area :chunking_hint, rows: 4, placeholder: "Optional: describe the doc structure (e.g., Rule / Section / Article)." %>
+        <div class="hint">The first step will propose semantic sections for you to review before generating cards.</div>
       </div>
 
       <div>

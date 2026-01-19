@@ -1,4 +1,5 @@
 require "fileutils"
+require "csv"
 
 class FlashCardsController < ApplicationController
   def new
@@ -6,13 +7,12 @@ class FlashCardsController < ApplicationController
   end
 
   def show
-    @flash_card_request = FlashCardRequest.find(params[:id])
-    @prompt_text = @flash_card_request.prompt_text.presence || reconstruct_prompt_text(@flash_card_request)
+    @flash_card_request = FlashCardRequest.includes(:flash_cards).find(params[:id])
 
     respond_to do |format|
       format.html
       format.csv do
-        unless @flash_card_request.status == "completed" && @flash_card_request.response_text.present?
+        unless @flash_card_request.status == "completed" && @flash_card_request.flash_cards.any?
           return head :unprocessable_entity
         end
 
@@ -22,12 +22,13 @@ class FlashCardsController < ApplicationController
         base = base.parameterize(separator: "-").presence || "anki-cards"
         timestamp = @flash_card_request.created_at&.strftime("%Y%m%d-%H%M") || Time.current.strftime("%Y%m%d-%H%M")
         filename = "#{base}-anki-cards-#{timestamp}-#{@flash_card_request.id}.csv"
-        send_data(
-          @flash_card_request.response_text,
-          filename:,
-          type: "text/csv; charset=utf-8",
-          disposition: "attachment"
-        )
+        csv = CSV.generate(row_sep: "\n", force_quotes: true) do |out|
+          @flash_card_request.flash_cards.each do |card|
+            out << [card.front, card.back]
+          end
+        end
+
+        send_data(csv, filename:, type: "text/csv; charset=utf-8", disposition: "attachment")
       end
       format.json do
         render json: {
@@ -37,8 +38,7 @@ class FlashCardsController < ApplicationController
           current_step: @flash_card_request.current_step,
           model: @flash_card_request.model,
           pdf_filename: @flash_card_request.pdf_filename,
-          log_tail: @flash_card_request.log_text.to_s[-10_000, 10_000].to_s,
-          prompt_present: @prompt_text.present?
+          log_tail: @flash_card_request.log_text.to_s[-10_000, 10_000].to_s
         }
       end
     end
@@ -56,8 +56,9 @@ class FlashCardsController < ApplicationController
     guidance = params[:guidance].to_s.strip
     notes = params[:notes].to_s.strip
     model = params[:model].presence || default_model
-    embedding_model = params[:embedding_model].presence || default_embedding_model
-
+    embedding_model = params[:embedding_model].to_s.strip.presence || ENV.fetch("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text")
+    detail_level = params[:detail_level].to_s.strip.presence || "medium"
+    chunking_hint = params[:chunking_hint].to_s.strip
     pdf_path = persist_uploaded_pdf(uploaded_pdf)
     request = persist_request!(
       pdf_filename: uploaded_pdf.original_filename,
@@ -65,10 +66,11 @@ class FlashCardsController < ApplicationController
       guidance:,
       notes:,
       model:,
-      embedding_model:
+      embedding_model:,
+      detail_level:
     )
 
-    FlashCardGenerationJob.perform_later(request.id)
+    FlashCardChunkingJob.perform_later(request.id, user_hint: chunking_hint.presence)
 
     redirect_to flash_card_path(request)
   rescue PdfTextExtractor::ExtractionError, OllamaClient::RequestError,
@@ -91,13 +93,63 @@ class FlashCardsController < ApplicationController
       progress: 0,
       current_step: "Queued for retry",
       error_message: nil,
-      response_text: nil,
       vector_path: nil,
       log_text: nil,
       prompt_text: nil
     )
+    request.flash_cards.update_all(status: "kept", refined_front: nil, refined_back: nil, refinement_reason: nil)
+    request.flash_cards.delete_all
+    request.flash_card_chunks.delete_all
     request.append_log!("Retry requested")
 
+    FlashCardGenerationJob.perform_later(request.id)
+    redirect_to flash_card_path(request)
+  end
+
+  def refine
+    request = FlashCardRequest.find(params[:id])
+    instruction = params[:refinement_prompt].to_s.strip
+
+    if instruction.empty?
+      flash[:alert] = "Please enter refinement instructions."
+      return redirect_to flash_card_path(request)
+    end
+
+    unless FlashCard.column_names.include?("status")
+      flash[:alert] = "Refinement is not available until you run migrations (missing flash_cards.status)."
+      return redirect_to flash_card_path(request)
+    end
+
+    request.append_log!("Refinement requested")
+    FlashCardRefinementJob.perform_later(request.id, instruction)
+    redirect_to flash_card_path(request)
+  end
+
+  def rechunk
+    request = FlashCardRequest.find(params[:id])
+    hint = params[:chunking_hint].to_s.strip
+    request.append_log!("Rechunk requested")
+    FlashCardChunkingJob.perform_later(request.id, user_hint: hint.presence)
+    redirect_to flash_card_path(request)
+  end
+
+  def approve_chunks
+    request = FlashCardRequest.find(params[:id])
+    chunks_params = params.fetch(:chunks, {})
+
+    request.flash_card_chunks.order(:index).each do |chunk|
+      incoming = chunks_params[chunk.id.to_s]
+      next unless incoming
+
+      chunk.update!(
+        title: incoming[:title].to_s,
+        content_text: incoming[:content_text].to_s,
+        approved: true
+      )
+    end
+
+    request.append_log!("Chunks approved; starting generation")
+    request.update!(status: "queued", current_step: "Queued for generation", progress: 0)
     FlashCardGenerationJob.perform_later(request.id)
     redirect_to flash_card_path(request)
   end
@@ -112,9 +164,6 @@ class FlashCardsController < ApplicationController
     "llama3.2"
   end
 
-  def default_embedding_model
-    ENV.fetch("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text")
-  end
 
   def prepare_form_data
     @default_model = default_model
@@ -135,7 +184,7 @@ class FlashCardsController < ApplicationController
     []
   end
 
-  def persist_request!(pdf_filename:, pdf_path:, guidance:, notes:, model:, embedding_model:)
+  def persist_request!(pdf_filename:, pdf_path:, guidance:, notes:, model:, embedding_model:, detail_level:)
     FlashCardRequest.create!(
       pdf_filename:,
       pdf_path:,
@@ -143,6 +192,7 @@ class FlashCardsController < ApplicationController
       notes: notes.presence,
       model:,
       embedding_model:,
+      detail_level:,
       status: "queued",
       progress: 0
     )
@@ -161,16 +211,4 @@ class FlashCardsController < ApplicationController
     path.to_s
   end
 
-  def reconstruct_prompt_text(request)
-    return nil unless request.pdf_path.present? && File.exist?(request.pdf_path)
-
-    pdf_text = PdfTextExtractor.extract(request.pdf_path)
-    FlashCardPromptBuilder.build(
-      pdf_text:,
-      guidance: request.guidance.to_s,
-      notes: request.notes.to_s
-    )
-  rescue PdfTextExtractor::ExtractionError
-    nil
-  end
 end

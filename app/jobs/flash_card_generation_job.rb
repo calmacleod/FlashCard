@@ -1,5 +1,3 @@
-require "csv"
-
 class FlashCardGenerationJob < ApplicationJob
   queue_as :default
 
@@ -8,53 +6,55 @@ class FlashCardGenerationJob < ApplicationJob
     request.update!(status: "processing", progress: 1)
     request.append_log!("Job started")
     request.append_log!("Generation model: #{request.model}")
-    request.append_log!("Embedding model: #{request.embedding_model}")
+    request.append_log!("Detail level: #{request.detail_level}")
 
-    request.set_step!("Vectorizing PDF", progress: 5)
-    request.append_log!("Extracting text and generating embeddings…")
+    request.set_step!("Using approved chunks", progress: 5)
+    chunks = request.flash_card_chunks.where(approved: true).order(:index).to_a
+    if chunks.empty?
+      request.append_log!("No approved chunks found. Please review chunks before generating.")
+      request.update!(status: "awaiting_approval", current_step: "Awaiting chunk approval", progress: 100)
+      return
+    end
+    request.append_log!("Using #{chunks.length} approved chunks")
 
-    last_logged_chunk = 0
-    vector_result = PdfVectorizer.vectorize(request.pdf_path, embedding_model: request.embedding_model) do |index:, total:|
-      progress = 5 + ((index.to_f / total) * 45).round
-      request.update!(progress:) if (progress > request.progress)
+    request.flash_cards.delete_all
+    request.set_step!("Generating cards", progress: 25)
 
-      # Avoid spamming DB writes/logs: log every 10 chunks and the final chunk.
-      if index == total || (index - last_logged_chunk) >= 10
-        request.append_log!("Embedded chunk #{index}/#{total}")
-        last_logged_chunk = index
+    chunks.each_with_index do |chunk, index|
+      percent = 25 + (((index + 1).to_f / chunks.length) * 60).round
+      request.update!(progress: percent)
+      request.append_log!("Generating cards for chunk #{index + 1}/#{chunks.length}: #{chunk.title}")
+
+      min_cards, max_cards = card_targets_for(request.detail_level)
+      prompt = FlashCardPromptBuilder.build(
+        pdf_text: chunk.content_text,
+        guidance: request.guidance.to_s,
+        notes: request.notes.to_s,
+        section_title: chunk.title.to_s,
+        min_cards:,
+        max_cards:
+      )
+
+      response = OllamaClient.new.generate(prompt:, model: request.model)
+
+      request.append_log!("Model response preview (head): #{snippet(response.text, 500)}")
+      request.append_log!("Model response preview (tail): #{snippet(response.text, 500, from_end: true)}")
+
+      cards = FlashCardCardsExtractor.extract(response.text)
+      cards = cards.first(max_cards)
+      request.append_log!("Built #{cards.length} cards in section #{index + 1}")
+
+      cards.each do |front, back|
+        FlashCard.create!(
+          flash_card_request: request,
+          chunk_index: chunk.index,
+          front:,
+          back:
+        )
       end
     end
-    request.update!(
-      vector_path: vector_result.vector_path,
-      progress: 50,
-      current_step: "Generating cards"
-    )
-    request.append_log!("Embeddings saved to #{vector_result.vector_path}")
-
-    prompt = FlashCardPromptBuilder.build(
-      pdf_text: vector_result.text,
-      guidance: request.guidance.to_s,
-      notes: request.notes.to_s
-    )
-    request.update!(prompt_text: prompt)
-
-    request.update!(progress: 70)
-    request.append_log!("Calling Ollama /api/generate…")
-    response = OllamaClient.new.generate(prompt:, model: request.model)
-
-    request.update!(progress: 85)
-    request.append_log!("Parsing model response into cards…")
-    cards = FlashCardCardsExtractor.extract(response.text)
-    request.append_log!("Built #{cards.length} cards")
-
-    request.update!(progress: 92)
-    request.append_log!("Rendering CSV…")
-    csv = CSV.generate(row_sep: "\n", force_quotes: true) do |out|
-      cards.each { |front, back| out << [front, back] }
-    end
 
     request.update!(
-      response_text: csv,
       status: "completed",
       progress: 100,
       current_step: "Completed"
@@ -64,5 +64,26 @@ class FlashCardGenerationJob < ApplicationJob
     request&.append_log!("ERROR: #{error.class}: #{error.message}")
     request&.update!(status: "failed", progress: 100, current_step: "Failed", error_message: error.message)
     raise
+  end
+
+  private
+
+  def card_targets_for(detail_level)
+    case detail_level.to_s
+    when "low"
+      [2, 5]
+    when "high"
+      [8, 20]
+    else
+      [4, 10]
+    end
+  end
+
+  def snippet(text, length, from_end: false)
+    clean = text.to_s.gsub(/\s+/, " ").strip
+    return "" if clean.empty?
+    return clean[-length, length].to_s if from_end
+
+    clean[0, length].to_s
   end
 end

@@ -2,6 +2,8 @@
 
 pin "application"
 pin "theme_toggle"
+pin "request_panel_state"
+pin "detail_slider"
 pin "@rails/actioncable", to: "https://cdn.jsdelivr.net/npm/@rails/actioncable@8.0.0/app/assets/javascripts/actioncable.esm.js"
 pin "@hotwired/turbo-rails", to: "turbo.min.js"
 pin "@hotwired/stimulus", to: "stimulus.min.js"

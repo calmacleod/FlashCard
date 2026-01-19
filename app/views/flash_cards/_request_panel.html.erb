@@ -1,19 +1,109 @@
-<% prompt_text = local_assigns[:prompt_text] || flash_card_request.prompt_text %>
-
-<% if flash_card_request.status == "completed" %>
+<% if flash_card_request.status == "awaiting_approval" %>
   <div class="card">
-    <p>
-      Copy the CSV below into a file (for example, <code>cards.csv</code>) and import into Anki.
-    </p>
-
-    <textarea rows="22"><%= flash_card_request.response_text %></textarea>
+    <p><strong>Chunk review</strong></p>
+    <p class="meta">Review/edit the suggested sections below. When you’re happy, approve to start generating cards.</p>
   </div>
-  <div class="actions">
-    <%= link_to "Download CSV", flash_card_path(flash_card_request, format: :csv), class: "btn", data: { turbo: false } %>
-    <%= button_to "Retry generation", retry_flash_card_path(flash_card_request), method: :post, class: "btn" %>
+
+  <div class="card actions-card">
+    <p><strong>Re-chunk (optional)</strong></p>
+    <%= form_with url: rechunk_flash_card_path(flash_card_request), method: :post, class: "refine-form" do |form| %>
+      <%= form.text_area :chunking_hint, rows: 3, placeholder: "Example: This document is structured as Rule / Section / Article." %>
+      <div class="actions">
+        <%= form.submit "Re-run chunking", class: "btn" %>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="card actions-card">
+    <p><strong>Approve chunks</strong></p>
+    <%= form_with url: approve_chunks_flash_card_path(flash_card_request), method: :post, class: "refine-form" do |form| %>
+      <% flash_card_request.flash_card_chunks.order(:index).each do |chunk| %>
+        <details class="card preview-card" data-collapsible-key="chunk_<%= chunk.id %>">
+          <summary class="card-summary">
+            <span><strong>Chunk <%= chunk.index + 1 %>:</strong> <%= chunk.title %></span>
+            <span class="summary-hint" data-summary-hint>Expand</span>
+          </summary>
+          <div class="form-grid">
+            <div>
+              <label>Title</label>
+              <input type="text" name="chunks[<%= chunk.id %>][title]" value="<%= chunk.title %>" autocomplete="off">
+            </div>
+            <div>
+              <label>Content</label>
+              <textarea name="chunks[<%= chunk.id %>][content_text]" rows="10"><%= chunk.content_text %></textarea>
+            </div>
+          </div>
+        </details>
+      <% end %>
+      <div class="actions">
+        <%= form.submit "Approve & Generate Cards", class: "btn" %>
+      </div>
+    <% end %>
+  </div>
+
+<% elsif flash_card_request.status == "completed" %>
+  <div class="card">
+    <p><strong>Request details</strong></p>
+    <p class="meta"><strong>Notes:</strong> <%= flash_card_request.notes.presence || "—" %></p>
+    <p class="meta"><strong>Instructions:</strong> <%= flash_card_request.guidance.presence || "—" %></p>
+    <p class="meta"><strong>Embedding model:</strong> <%= flash_card_request.embedding_model.to_s %></p>
+    <p class="meta"><strong>Detail level:</strong> <%= flash_card_request.detail_level.to_s.upcase %></p>
+  </div>
+  <div class="card actions-card">
+    <p><strong>Export</strong></p>
+    <p class="meta">Download the CSV for Anki import.</p>
+    <div class="actions">
+      <%= link_to "Download CSV", flash_card_path(flash_card_request, format: :csv), class: "btn", data: { turbo: false } %>
+    </div>
+  </div>
+
+  <div class="card actions-card">
+    <p><strong>Refine cards</strong></p>
+    <p class="meta">Apply an instruction to keep, change, or discard cards.</p>
+    <%= form_with url: refine_flash_card_path(flash_card_request), method: :post, class: "refine-form" do |form| %>
+      <%= form.text_area :refinement_prompt, rows: 4, placeholder: "Example: Remove cards that only reference rule numbers without context." %>
+      <div class="actions">
+        <%= form.submit "Run refinement", class: "btn" %>
+      </div>
+    <% end %>
+  </div>
+
+  <details class="card preview-card" open data-collapsible-key="preview">
+    <summary class="card-summary" aria-label="Preview cards toggle">
+      <span><strong>Preview cards</strong></span>
+      <span class="summary-hint" data-summary-hint>Collapse</span>
+    </summary>
+    <% cards = flash_card_request.flash_cards.order(:chunk_index, :id) %>
+    <% if cards.any? %>
+      <div class="card-list">
+        <% cards.each do |card| %>
+          <div class="card-item">
+            <div class="card-item__label">Q</div>
+            <div class="card-item__content"><%= card.effective_front %></div>
+            <div class="card-item__label">A</div>
+            <div class="card-item__content"><%= card.effective_back %></div>
+            <div class="card-item__status"><%= card.status_value %></div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="meta">No cards generated yet.</p>
+    <% end %>
+  </details>
+  <div class="card actions-card">
+    <p><strong>Actions</strong></p>
+    <p class="meta">Need to re-run this request?</p>
+    <div class="actions">
+      <%= button_to "Retry generation", retry_flash_card_path(flash_card_request), method: :post, class: "btn" %>
+    </div>
   </div>
 <% else %>
   <div class="card">
+    <p><strong>Request details</strong></p>
+    <p class="meta"><strong>Notes:</strong> <%= flash_card_request.notes.presence || "—" %></p>
+    <p class="meta"><strong>Instructions:</strong> <%= flash_card_request.guidance.presence || "—" %></p>
+    <p class="meta"><strong>Embedding model:</strong> <%= flash_card_request.embedding_model.to_s %></p>
+    <hr class="divider">
     <p><strong>Status:</strong> <%= flash_card_request.status %></p>
     <p class="meta"><strong>Step:</strong> <%= flash_card_request.current_step.presence || "—" %></p>
     <div class="progress">
@@ -24,21 +114,18 @@
       <p class="alert"><%= flash_card_request.error_message %></p>
     <% end %>
   </div>
-  <div class="actions">
-    <%= button_to "Retry generation", retry_flash_card_path(flash_card_request), method: :post, class: "btn" %>
+  <div class="card actions-card">
+    <p><strong>Actions</strong></p>
+    <div class="actions">
+      <%= button_to "Retry generation", retry_flash_card_path(flash_card_request), method: :post, class: "btn" %>
+    </div>
   </div>
 <% end %>
 
-<div class="card log-card">
-  <p><strong>Job log</strong></p>
+<details class="card log-card" data-collapsible-key="job_log">
+  <summary class="card-summary" aria-label="Job log toggle">
+    <span><strong>Job log</strong></span>
+    <span class="summary-hint" data-summary-hint>Expand</span>
+  </summary>
   <pre class="log-output"><%= flash_card_request.log_text.to_s %></pre>
-</div>
-
-<div class="card log-card">
-  <p><strong>Prompt used</strong></p>
-  <% if prompt_text.present? %>
-    <textarea rows="14" readonly><%= prompt_text %></textarea>
-  <% else %>
-    <p class="meta">Prompt not available for this request.</p>
-  <% end %>
-</div>
+</details>

@@ -9,6 +9,7 @@ function subscribeToFlashCardRequest(requestId) {
         const target = document.getElementById(`flash_card_request_${requestId}`);
         if (!target) return;
         target.innerHTML = data.html;
+        document.dispatchEvent(new CustomEvent("flash-card-request:updated", { detail: { requestId } }));
       }
     }
   )

@@ -10,24 +10,56 @@ class OllamaClient
     @base_url = base_url
   end
 
-  def generate(prompt:, model:, temperature: 0.2)
+  # Text generation (legacy endpoint).
+  # Prefer #chat for structured outputs via JSON schema `format`.
+  def generate(prompt:, model:, temperature: 0.2, format: nil, options: {})
     uri = URI.join(@base_url, "/api/generate")
     request = Net::HTTP::Post.new(uri)
     request["Content-Type"] = "application/json"
-    request.body = JSON.dump(
+    payload = {
       model: model,
       prompt: prompt,
       temperature: temperature,
-      stream: false
-    )
+      stream: false,
+      options: options
+    }
+    payload[:format] = format if format
+    request.body = JSON.dump(payload)
 
-    response = Net::HTTP.start(uri.hostname, uri.port) do |http|
-      http.request(request)
-    end
+    response = http_post(uri, request)
 
     ensure_success!(response)
     payload = JSON.parse(response.body)
     Response.new(payload.fetch("response"))
+  rescue JSON::ParserError => error
+    raise RequestError, "Ollama returned invalid JSON: #{error.message}"
+  rescue Errno::ECONNREFUSED, SocketError => error
+    raise RequestError, "Unable to reach Ollama at #{@base_url}: #{error.message}"
+  end
+
+  # Chat endpoint (recommended for structured outputs per Ollama docs).
+  # messages: [{role:"user"|"system"|"assistant", content:"..."}]
+  # format: "json" OR a JSON schema object (Hash) to constrain output.
+  def chat(messages:, model:, temperature: 0.2, format: nil, options: {})
+    uri = URI.join(@base_url, "/api/chat")
+    request = Net::HTTP::Post.new(uri)
+    request["Content-Type"] = "application/json"
+    payload = {
+      model: model,
+      messages: messages,
+      temperature: temperature,
+      stream: false,
+      options: options
+    }
+    payload[:format] = format if format
+    request.body = JSON.dump(payload)
+
+    response = http_post(uri, request)
+
+    ensure_success!(response)
+    payload = JSON.parse(response.body)
+    message = payload.fetch("message")
+    Response.new(message.fetch("content"))
   rescue JSON::ParserError => error
     raise RequestError, "Ollama returned invalid JSON: #{error.message}"
   rescue Errno::ECONNREFUSED, SocketError => error
@@ -70,6 +102,15 @@ class OllamaClient
   end
 
   private
+
+  def http_post(uri, request)
+    Net::HTTP.start(uri.hostname, uri.port) do |http|
+      http.open_timeout = Integer(ENV.fetch("OLLAMA_OPEN_TIMEOUT", "5"))
+      http.read_timeout = Integer(ENV.fetch("OLLAMA_READ_TIMEOUT", "300"))
+      http.write_timeout = Integer(ENV.fetch("OLLAMA_WRITE_TIMEOUT", "30")) if http.respond_to?(:write_timeout=)
+      http.request(request)
+    end
+  end
 
   def ensure_success!(response)
     return if response.is_a?(Net::HTTPSuccess)

@@ -2,4 +2,6 @@
 import "@hotwired/turbo-rails"
 import "controllers"
 import "channels"
+import "request_panel_state"
+import "detail_slider"
 

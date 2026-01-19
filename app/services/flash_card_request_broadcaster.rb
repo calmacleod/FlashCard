@@ -3,8 +3,7 @@ class FlashCardRequestBroadcaster
     html = ApplicationController.render(
       partial: "flash_cards/request_panel",
       locals: {
-        flash_card_request: request,
-        prompt_text: request.prompt_text
+        flash_card_request: request
       }
     )
 

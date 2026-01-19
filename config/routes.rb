@@ -12,6 +12,9 @@ Rails.application.routes.draw do
   root "flash_cards#new"
   resources :flash_cards, only: [:new, :create, :show] do
     post :retry, on: :member
+    post :refine, on: :member
+    post :approve_chunks, on: :member
+    post :rechunk, on: :member
   end
 
   mount MissionControl::Jobs::Engine, at: "/jobs"
