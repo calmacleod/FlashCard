@@ -18,7 +18,7 @@ RubyLLM.configure do |config|
 
   # Optional defaults you can set via env (applies to RubyLLM.chat / RubyLLM.embed convenience methods)
   # config.default_model = ENV["RUBYLLM_DEFAULT_MODEL"] if ENV["RUBYLLM_DEFAULT_MODEL"].present?
-  c# onfig.default_embedding_model = ENV["RUBYLLM_DEFAULT_EMBEDDING_MODEL"] if ENV["RUBYLLM_DEFAULT_EMBEDDING_MODEL"].present?
+  # config.default_embedding_model = ENV["RUBYLLM_DEFAULT_EMBEDDING_MODEL"] if ENV["RUBYLLM_DEFAULT_EMBEDDING_MODEL"].present?
 
   config.logger = Rails.logger
 end
