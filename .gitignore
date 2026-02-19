@@ -34,3 +34,5 @@
 /config/*.key
 
 .DS_Store
+
+/test_docs/*
