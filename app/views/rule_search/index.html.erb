@@ -3,41 +3,56 @@
     <h1>Rule Search</h1>
   </div>
 
-  <%= form_with url: rule_search_search_path, method: :get, data: { turbo: false } do |f| %>
+  <%= form_with url: rule_search_search_path, method: :get, data: { turbo_frame: "search-results", turbo_action: "advance", controller: "rule-filter", "rule-filter-rules-by-source-value": @rule_numbers_by_source.to_json } do |f| %>
     <div class="card" style="margin-bottom: 1.5rem;">
       <div class="form-grid">
         <div>
           <%= f.label :query, "Search query" %>
-          <%= f.text_field :query, value: params[:query], placeholder: "e.g. player substitution rules", required: true %>
+          <%= f.text_field :query, value: params[:query], placeholder: "e.g. player substitution rules", data: { "rule-filter-target": "query" } %>
         </div>
 
         <div>
           <%= f.label :source_csv, "Filter by rulebook" %>
           <%= f.select :source_csv,
-              options_for_select([["All rulebooks", ""]] + @source_csvs.map { |c| [File.basename(c), c] }, params[:source_csv]) %>
+              options_for_select([["All rulebooks", ""]] + @source_csvs.map { |c| [File.basename(c), c] }, params[:source_csv]),
+              {},
+              { data: { "rule-filter-target": "source", action: "change->rule-filter#filterRules" } } %>
         </div>
 
-        <%= f.submit "Search", class: "btn" %>
+        <div>
+          <%= f.label :rule_number, "Filter by rule number" %>
+          <%= f.select :rule_number,
+              options_for_select([["All rules", ""]] + @rule_numbers.map { |r| [r, r] }, params[:rule_number]),
+              {},
+              { data: { "rule-filter-target": "ruleNumber" } } %>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; align-items: flex-end;">
+          <%= f.submit "Search", class: "btn" %>
+          <button type="button" class="btn btn--secondary" data-action="rule-filter#clear">Clear</button>
+        </div>
       </div>
     </div>
   <% end %>
 
-  <% if @results&.any? %>
-    <p class="meta" style="margin-bottom: 1rem; font-size: 13px;"><%= @results.size %> result<%= @results.size == 1 ? "" : "s" %></p>
-    <div class="card-list">
-      <% @results.each do |result| %>
-        <div class="card-item">
-          <% parts = [result[:rule_number], result[:section], result[:article]].compact.reject(&:empty?) %>
-          <% if parts.any? %>
-            <p class="card-item__label" style="font-size: 16px; text-transform: none; letter-spacing: 0; font-weight: 700; color: var(--text);">
-              <%= parts.join(" › ") %>
-            </p>
-          <% end %>
-          <p class="card-item__content" style="white-space: pre-wrap; line-height: 1.6;"><%= result[:text] %></p>
-        </div>
-      <% end %>
-    </div>
-  <% elsif params[:query].present? %>
-    <p class="meta">No results found.</p>
+  <%= turbo_frame_tag "search-results" do %>
+    <% if @results&.any? %>
+      <p class="meta" style="margin-bottom: 1rem; font-size: 13px;"><%= @results.size %> result<%= @results.size == 1 ? "" : "s" %></p>
+      <div class="card-list" data-controller="search-highlight" data-search-highlight-query-value="<%= params[:query] %>">
+        <% @results.each do |result| %>
+          <div class="card-item">
+            <% parts = [result[:rule_number], result[:section], result[:article]].compact.reject(&:empty?) %>
+            <% if parts.any? %>
+              <p class="card-item__label" style="font-size: 16px; text-transform: none; letter-spacing: 0; font-weight: 700; color: var(--text);">
+                <%= parts.join(" › ") %>
+              </p>
+            <% end %>
+            <p class="card-item__content" style="white-space: pre-wrap; line-height: 1.6;"><%= result[:text] %></p>
+          </div>
+        <% end %>
+      </div>
+    <% elsif params[:query].present? %>
+      <p class="meta">No results found.</p>
+    <% end %>
   <% end %>
 </div>

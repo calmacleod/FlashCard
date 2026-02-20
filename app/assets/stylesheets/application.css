@@ -661,6 +661,13 @@ details.card > *:not(summary) {
   color: var(--text);
 }
 
+mark.search-highlight {
+  background: oklch(0.9 0.15 90);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
 /* Responsive polish */
 @media (max-width: 640px) {
   .page {
