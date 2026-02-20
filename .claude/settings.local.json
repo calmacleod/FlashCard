@@ -5,7 +5,9 @@
       "Bash(ruby -c:*)",
       "WebFetch(domain:rubyllm.com)",
       "WebFetch(domain:weaviate.io)",
-      "WebFetch(domain:docs.weaviate.io)"
+      "WebFetch(domain:docs.weaviate.io)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }

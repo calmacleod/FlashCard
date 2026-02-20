@@ -5,9 +5,11 @@ class RulebookProcessor
   TOKENS_PER_WORD   = 0.75
   TARGET_MIN_TOKENS = 700
   TARGET_MAX_TOKENS = 1000
+  MAX_TOKENS        = 1200
 
   TARGET_MIN_WORDS = (TARGET_MIN_TOKENS / TOKENS_PER_WORD).ceil  # ~400
   TARGET_MAX_WORDS = (TARGET_MAX_TOKENS / TOKENS_PER_WORD).ceil  # ~800
+  MAX_WORDS        = (MAX_TOKENS        / TOKENS_PER_WORD).ceil  # ~1600
 
   class UnitSchema < RubyLLM::Schema
     array :units do
@@ -20,8 +22,8 @@ class RulebookProcessor
     end
   end
 
-  def self.process(pdf_path, model: "gemini-3-flash-preview", delay: 0)
-    new(pdf_path, model:, delay:).run
+  def self.process(pdf_path, model: "gemini-3-flash-preview", delay: 0, max_tokens: nil)
+    new(pdf_path, model:, delay:, max_tokens:).run
   end
 
   def self.preview_text(pdf_path, show_chunks: false)
@@ -45,16 +47,27 @@ class RulebookProcessor
     puts "Wrote cleaned text to #{outpath}"
   end
 
+  def self.token_count(pdf_path)
+    instance = new(pdf_path, model: "")
+    raw      = instance.send(:extract_text)
+    clean    = instance.send(:strip_boilerplate, raw)
+    words    = clean.split.size
+    tokens   = (words * TOKENS_PER_WORD).round
+    puts "#{File.basename(pdf_path)}: #{words} words ≈ #{tokens} tokens"
+    tokens
+  end
+
   def self.clear(pdf_path)
     key     = File.expand_path(pdf_path)
     deleted = RulebookChunk.for_pdf(key).delete_all
     puts "Cleared #{deleted} chunk(s) for #{File.basename(pdf_path)}"
   end
 
-  def initialize(pdf_path, model:, delay: 0)
-    @pdf_path = pdf_path
-    @model    = model
-    @delay    = delay.to_f
+  def initialize(pdf_path, model:, delay: 0, max_tokens: nil)
+    @pdf_path   = pdf_path
+    @model      = model
+    @delay      = delay.to_f
+    @max_words  = max_tokens ? (max_tokens / TOKENS_PER_WORD).ceil : nil
   end
 
   def run
@@ -256,10 +269,13 @@ class RulebookProcessor
   def build_chunks(text)
     clean      = strip_boilerplate(text)
     clean      = ensure_section_breaks(clean)
-    paragraphs = clean.split(/\n{2,}/).map(&:strip).reject(&:empty?)
+    paragraphs = clean.split(/\n+/).map(&:strip).reject(&:empty?)
     chunks     = []
     buffer     = []
     word_count = 0
+
+    puts "MAX WORDS: #{@max_words}"
+    puts "HELLO?"
 
     paragraphs.each do |para|
       pw = para.split.size
@@ -272,6 +288,9 @@ class RulebookProcessor
                 true
               elsif article_header?(para) && word_count >= TARGET_MIN_WORDS && buffer.any?
                 # Split at an Article boundary only when the chunk is already long enough
+                true
+              elsif @max_words && buffer.any? && word_count + pw > @max_words
+                # Hard cap: flush before adding a paragraph that would exceed the token limit
                 true
               else
                 false

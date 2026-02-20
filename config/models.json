@@ -26325,6 +26325,39 @@
     }
   },
   {
+    "id": "llama3.2:3b",
+    "name": "Llama3.2:3b",
+    "provider": "openai",
+    "family": "other",
+    "created_at": "2026-02-20 17:54:48 -0500",
+    "context_window": 4096,
+    "max_output_tokens": 16384,
+    "knowledge_cutoff": null,
+    "modalities": {
+      "input": [
+        "text"
+      ],
+      "output": [
+        "text"
+      ]
+    },
+    "capabilities": [
+      "streaming"
+    ],
+    "pricing": {
+      "text_tokens": {
+        "standard": {
+          "input_per_million": 0.5,
+          "output_per_million": 1.5
+        }
+      }
+    },
+    "metadata": {
+      "object": "model",
+      "owned_by": "library"
+    }
+  },
+  {
     "id": "nomic-embed-text:latest",
     "name": "Nomic Embed Text:latest",
     "provider": "openai",
