@@ -6,8 +6,15 @@ class RuleSearchController < ApplicationController
 
   def search
     @source_csvs = RulebookEntry.distinct.pluck(:source_csv)
+    @query = params[:query]
     source_csv = params[:source_csv].presence
-    @results = RuleSearcher.search(params[:query], source_csv:, limit: 15)
+
+    if @query.present?
+      @results = RuleSearcher.search(@query, source_csv:, limit: 15)
+    else
+      @results = []
+    end
+
     render :index
   end
 end

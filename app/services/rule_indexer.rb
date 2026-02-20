@@ -17,8 +17,11 @@ class RuleIndexer
     puts "Done."
   end
 
+  OLLAMA = OllamaClient.new(base_url: ENV.fetch("OLLAMA_BASE_URL", "http://localhost:11434"))
+  EMBEDDING_MODEL = ENV.fetch("OLLAMA_EMBEDDING_MODEL", "bge-m3")
+
   def self.embed(text)
-    RubyLLM.embed(text, model: "gemini-embedding-001").vectors
+    OLLAMA.embed(text: text, model: EMBEDDING_MODEL).vector
   end
   private_class_method :embed
 end

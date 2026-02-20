@@ -17,8 +17,8 @@ Rails.application.routes.draw do
     post :rechunk, on: :member
   end
 
-  get  "rule_search",        to: "rule_search#index"
-  post "rule_search/search", to: "rule_search#search", as: :rule_search_search
+  get  "rule_search",        to: "rule_search#index",  as: :rule_search
+  get  "rule_search/search", to: "rule_search#search", as: :rule_search_search
 
   mount MissionControl::Jobs::Engine, at: "/jobs"
 

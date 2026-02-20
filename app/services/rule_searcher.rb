@@ -1,6 +1,8 @@
 class RuleSearcher
   def self.search(query, source_csv: nil, limit: 10)
-    vector = RubyLLM.embed(query, model: "gemini-embedding-001").vectors
+    vector = OllamaClient.new(base_url: ENV.fetch("OLLAMA_BASE_URL", "http://localhost:11434"))
+                          .embed(text: query, model: ENV.fetch("OLLAMA_EMBEDDING_MODEL", "bge-m3"))
+                          .vector
 
     source_filter = source_csv.present? ? "AND source_csv = #{ActiveRecord::Base.connection.quote(source_csv)}" : ""
 
