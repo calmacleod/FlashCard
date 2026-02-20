@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_19_000100) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_20_014651) do
   create_table "flash_card_chunks", force: :cascade do |t|
     t.boolean "approved", default: false, null: false
     t.text "content_text", null: false
@@ -74,6 +74,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_19_000100) do
     t.datetime "updated_at", null: false
     t.index ["pdf_path", "chunk_index"], name: "index_rulebook_chunks_on_pdf_path_and_chunk_index", unique: true
     t.index ["pdf_path", "status"], name: "index_rulebook_chunks_on_pdf_path_and_status"
+  end
+
+  create_table "rulebook_entries", force: :cascade do |t|
+    t.string "article"
+    t.datetime "created_at", null: false
+    t.integer "entry_index", null: false
+    t.string "rule_number"
+    t.string "section"
+    t.string "source_csv", null: false
+    t.text "text", null: false
+    t.datetime "updated_at", null: false
+    t.index ["source_csv", "entry_index"], name: "index_rulebook_entries_on_source_csv_and_entry_index", unique: true
+    t.index ["source_csv"], name: "index_rulebook_entries_on_source_csv"
   end
 
   add_foreign_key "flash_card_chunks", "flash_card_requests"

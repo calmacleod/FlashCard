@@ -68,11 +68,14 @@ class RulebookAssembler
 
         current_article = article if article
 
+        article_out, text_out = extract_leading_article_heading(current_article, text)
+        current_article = article_out if article_out != current_article
+
         resolved << ResolvedUnit.new(
           rule_number: current_rule,
           section:     current_section,
           article:     current_article,
-          text:        text,
+          text:        text_out,
           chunk_index: record.chunk_index
         )
       end
@@ -221,6 +224,28 @@ class RulebookAssembler
     end
 
     puts "Wrote #{units.size} units to #{outpath}"
+  end
+
+  # If the text begins with an article-like heading (e.g. "Article 1 – Length of Game"),
+  # promote it to the article field (replacing a bare "Article 1" if present) and
+  # strip it from the text so it isn't duplicated.
+  #
+  # Matches patterns like:
+  #   "Article 1 – Length of Game\nThe game shall..."
+  #   "Article 1\nThe game shall..."          ← bare duplicate, still strip
+  ARTICLE_HEADING_RE = /\AArticle\s+[\d\.]+(?:\s*[–\-—]\s*[^\n]+)?\n+/i
+
+  def extract_leading_article_heading(current_article, text)
+    m = text.match(ARTICLE_HEADING_RE)
+    return [ current_article, text ] unless m
+
+    heading = m[0].strip
+    rest    = text[m.end(0)..].strip
+
+    # Prefer the longer/more descriptive of the two article labels
+    promoted = (current_article.to_s.length >= heading.length) ? current_article : heading
+
+    [ promoted, rest ]
   end
 
   def chunk_range_label
