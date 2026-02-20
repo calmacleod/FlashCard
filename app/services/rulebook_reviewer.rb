@@ -1,11 +1,12 @@
 class RulebookReviewer
-  def self.review(pdf_path, chunk: nil)
-    new(pdf_path, chunk:).run
+  def self.review(pdf_path, chunk: nil, full_text: false)
+    new(pdf_path, chunk:, full_text:).run
   end
 
-  def initialize(pdf_path, chunk: nil)
-    @key        = File.expand_path(pdf_path)
+  def initialize(pdf_path, chunk: nil, full_text: false)
+    @key          = File.expand_path(pdf_path)
     @chunk_filter = chunk
+    @full_text    = full_text
   end
 
   def run
@@ -50,8 +51,12 @@ class RulebookReviewer
 
     puts "┌─ Chunk #{record.chunk_index}  [#{status_tag}]  #{record.units.size} units"
     puts "│  Source text (#{record.chunk_text.split.size} words):"
-    record.chunk_text.lines.first(3).each { |l| puts "│    #{l.rstrip}" }
-    puts "│    ..." if record.chunk_text.lines.size > 3
+    if @full_text
+      record.chunk_text.lines.each { |l| puts "│    #{l.rstrip}" }
+    else
+      record.chunk_text.lines.first(3).each { |l| puts "│    #{l.rstrip}" }
+      puts "│    ..." if record.chunk_text.lines.size > 3
+    end
     puts "│"
 
     units = record.units

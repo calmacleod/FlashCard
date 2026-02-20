@@ -23,7 +23,7 @@ class RulebookFlashcardGenerator
 
   BAR_WIDTH = 30
 
-  def self.generate(csv_path, model: "gemini-2.5-flash", output: nil, delay: 0)
+  def self.generate(csv_path, model: "gemini-3-flash-preview", output: nil, delay: 0)
     new(csv_path, model:, output:, delay:).run
   end
 
@@ -41,9 +41,11 @@ class RulebookFlashcardGenerator
     groups = group_by_rule_section(entries)
     puts "#{groups.size} rule/section groups to process\n\n"
 
-    @all_cards  = []
-    @start_time = Time.now
-    total       = groups.size
+    @all_cards     = []
+    @start_time    = Time.now
+    @input_tokens  = 0
+    @output_tokens = 0
+    total          = groups.size
 
     groups.each_with_index do |(key, group_entries), i|
       generate_for_group(key, group_entries, i + 1, total)
@@ -56,6 +58,7 @@ class RulebookFlashcardGenerator
     puts "─" * 60
     puts "Finished: #{@all_cards.size} cards from #{total} groups in #{format_duration(elapsed)}"
     puts "Output: #{@output}"
+    print_token_summary
   end
 
   private
@@ -109,6 +112,8 @@ class RulebookFlashcardGenerator
                  .with_schema(CardSchema)
                  .ask(prompt_for(rule_number, section, entries))
 
+    @input_tokens  += response.input_tokens.to_i
+    @output_tokens += response.output_tokens.to_i
     data = response.content.is_a?(Hash) ? response.content : JSON.parse(response.content)
     (data["cards"] || []).filter_map do |c|
       front = c["front"].to_s.strip
@@ -173,6 +178,21 @@ class RulebookFlashcardGenerator
 
       Return a JSON object with a "cards" array.
     PROMPT
+  end
+
+  def print_token_summary
+    total = @input_tokens + @output_tokens
+    puts "\nToken usage:"
+    puts "  Input:  #{@input_tokens.to_s.rjust(10)}"
+    puts "  Output: #{@output_tokens.to_s.rjust(10)}"
+    puts "  Total:  #{total.to_s.rjust(10)}"
+
+    model_info = RubyLLM.models.find(@model)
+    if model_info&.input_price_per_million && model_info&.output_price_per_million
+      input_cost  = @input_tokens  * model_info.input_price_per_million  / 1_000_000.0
+      output_cost = @output_tokens * model_info.output_price_per_million / 1_000_000.0
+      puts "  Cost:   $#{format('%.4f', input_cost + output_cost)}"
+    end
   end
 
   def build_label(rule_number, section)

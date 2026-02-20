@@ -17,15 +17,16 @@ class RulebookNormalizer
   BAR_WIDTH    = 30
   CONTEXT_WORDS = 400
 
-  def self.normalize(csv_path, model: "gemini-2.5-flash", delay: 0, pdf_path: nil)
-    new(csv_path, model:, delay:, pdf_path:).run
+  def self.normalize(csv_path, model: "gemini-2.5-flash", delay: 0, pdf_path: nil, direct: false)
+    new(csv_path, model:, delay:, pdf_path:, direct:).run
   end
 
-  def initialize(csv_path, model:, delay: 0, pdf_path: nil)
+  def initialize(csv_path, model:, delay: 0, pdf_path: nil, direct: false)
     @csv_path = File.expand_path(csv_path)
     @model    = model
     @delay    = delay.to_f
     @pdf_path = pdf_path ? File.expand_path(pdf_path) : nil
+    @direct   = direct
   end
 
   def run
@@ -40,16 +41,21 @@ class RulebookNormalizer
     @start_time  = Time.now
     total        = groups.size
 
-    puts "#{total} rule groups to normalize\n\n"
+    if @direct
+      puts "Direct mode — skipping LLM, carrying forward context\n\n"
+      direct_import(rows)
+    else
+      puts "#{total} rule groups to normalize\n\n"
 
-    groups.each_with_index do |(rule_number, group_rows), i|
-      normalize_group(rule_number, group_rows, i + 1, total)
-      sleep(@delay) if @delay > 0 && i + 1 < total
+      groups.each_with_index do |(rule_number, group_rows), i|
+        normalize_group(rule_number, group_rows, i + 1, total)
+        sleep(@delay) if @delay > 0 && i + 1 < total
+      end
     end
 
     elapsed = Time.now - @start_time
     puts "─" * 60
-    puts "Finished: #{@entry_index} entries written from #{total} groups in #{format_duration(elapsed)}"
+    puts "Finished: #{@entry_index} entries written in #{format_duration(elapsed)}"
   end
 
   private
@@ -74,6 +80,56 @@ class RulebookNormalizer
       groups = { blank_key => blank }.merge(groups)
     end
     groups
+  end
+
+  def direct_import(rows)
+    current_rule    = nil
+    current_section = nil
+    current_article = nil
+    article_counter = 0
+
+    rows.each do |row|
+      text    = row["text"].to_s.strip
+      rule    = row["rule_number"].to_s.strip.presence
+      section = row["section"].to_s.strip.presence
+      article = row["article"].to_s.strip.presence
+
+      # Update context before any skip so heading-only rows (empty text)
+      # still advance current_rule/section/article for all following rows.
+      if rule && rule != current_rule
+        current_rule    = rule
+        current_section = nil
+        current_article = nil
+        article_counter = 0
+      end
+
+      if section && section != current_section
+        current_section = section
+        current_article = nil
+        article_counter = 0
+      end
+
+      if article
+        current_article = article
+      elsif current_rule && current_section && current_article.nil?
+        article_counter += 1
+        current_article  = "Article #{article_counter}"
+      end
+
+      # Skip entries that have a rule but no section or article context — these
+      # are bare rule headings with no structural home yet.
+      next if current_rule && current_section.nil? && current_article.nil?
+
+      RulebookEntry.create!(
+        source_csv:  @csv_path,
+        entry_index: @entry_index,
+        rule_number: current_rule,
+        section:     current_section,
+        article:     current_article,
+        text:        text
+      )
+      @entry_index += 1
+    end
   end
 
   def normalize_group(rule_number, rows, index, total)

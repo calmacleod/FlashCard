@@ -48,13 +48,13 @@ class RulebookAssembler
 
     records.each do |record|
       record.units.each do |u|
-        text = u["text"].to_s.strip
-        next if text.empty?
-
+        text        = u["text"].to_s.strip
         rule_number = u["rule_number"].to_s.strip.presence
         section     = u["section"].to_s.strip.presence
         article     = u["article"].to_s.strip.presence
 
+        # Update context before any skip so heading-only units (empty text)
+        # still advance current_rule/section/article for all following units.
         if rule_number && rule_number != current_rule
           current_rule    = rule_number
           current_section = nil
@@ -67,6 +67,8 @@ class RulebookAssembler
         end
 
         current_article = article if article
+
+        next if text.empty?
 
         article_out, text_out = extract_leading_article_heading(current_article, text)
         current_article = article_out if article_out != current_article
