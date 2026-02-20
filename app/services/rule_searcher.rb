@@ -1,0 +1,33 @@
+class RuleSearcher
+  def self.search(query, source_csv: nil, limit: 10)
+    vector = RubyLLM.embed(query, model: "gemini-embedding-001").vectors
+
+    source_filter = source_csv.present? ? "AND source_csv = #{ActiveRecord::Base.connection.quote(source_csv)}" : ""
+
+    sql = <<~SQL
+      SELECT *, vec_distance_cosine(embedding, ?) AS distance
+      FROM rulebook_entries
+      WHERE embedding IS NOT NULL #{source_filter}
+      ORDER BY distance
+      LIMIT #{limit.to_i}
+    SQL
+
+    blob = vector.pack("f*")
+    bind = ActiveRecord::Relation::QueryAttribute.new(
+      "embedding",
+      blob,
+      ActiveRecord::Type::Binary.new
+    )
+
+    ActiveRecord::Base.connection.exec_query(sql, "RuleSearch", [ bind ]).map do |row|
+      {
+        text:        row["text"],
+        article:     row["article"],
+        section:     row["section"],
+        rule_number: row["rule_number"],
+        source_csv:  row["source_csv"],
+        distance:    row["distance"]
+      }
+    end
+  end
+end

@@ -1,0 +1,2 @@
+- Rule depdencies: Find refrences to other rules within an article and save that
+- RAG Lookup: Search over rules 

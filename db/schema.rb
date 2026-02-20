@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_20_014651) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_20_192930) do
   create_table "flash_card_chunks", force: :cascade do |t|
     t.boolean "approved", default: false, null: false
     t.text "content_text", null: false
@@ -79,6 +79,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_20_014651) do
   create_table "rulebook_entries", force: :cascade do |t|
     t.string "article"
     t.datetime "created_at", null: false
+    t.binary "embedding"
     t.integer "entry_index", null: false
     t.string "rule_number"
     t.string "section"

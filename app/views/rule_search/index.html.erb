@@ -1,0 +1,39 @@
+<div class="container mx-auto p-6 max-w-3xl">
+  <h1 class="text-2xl font-bold mb-6">Rule Search</h1>
+
+  <%= form_with url: rule_search_search_path, method: :post, data: { turbo: false }, class: "space-y-4 mb-8" do |f| %>
+    <div>
+      <%= f.label :query, "Search query", class: "block font-medium mb-1" %>
+      <%= f.text_field :query, value: params[:query], placeholder: "e.g. player substitution rules",
+          class: "w-full border rounded px-3 py-2", required: true %>
+    </div>
+
+    <div>
+      <%= f.label :source_csv, "Filter by rulebook (optional)", class: "block font-medium mb-1" %>
+      <%= f.select :source_csv,
+          options_for_select([["All rulebooks", ""]] + @source_csvs.map { |c| [File.basename(c), c] }, params[:source_csv]),
+          {}, class: "border rounded px-3 py-2" %>
+    </div>
+
+    <%= f.submit "Search", class: "bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 cursor-pointer" %>
+  <% end %>
+
+  <% if @results.any? %>
+    <h2 class="text-lg font-semibold mb-4">Results (<%= @results.size %>)</h2>
+    <ul class="space-y-4">
+      <% @results.each do |result| %>
+        <li class="border rounded p-4">
+          <p class="text-sm text-gray-500 mb-1">
+            <% parts = [result[:article], result[:section], result[:rule_number]].compact.reject(&:empty?) %>
+            <%= parts.join(" › ") %>
+            <span class="ml-2 text-gray-400">(distance: <%= result[:distance]&.round(4) %>)</span>
+          </p>
+          <p><%= result[:text] %></p>
+          <p class="text-xs text-gray-400 mt-1"><%= File.basename(result[:source_csv].to_s) %></p>
+        </li>
+      <% end %>
+    </ul>
+  <% elsif params[:query].present? %>
+    <p class="text-gray-500">No results found.</p>
+  <% end %>
+</div>

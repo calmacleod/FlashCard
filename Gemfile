@@ -21,6 +21,7 @@ gem "jbuilder"
 gem "mission_control-jobs"
 gem "csv"
 gem "ruby_llm"
+gem "sqlite-vec"
 gem "ruby_llm-schema"
 gem "dotenv-rails"
 
