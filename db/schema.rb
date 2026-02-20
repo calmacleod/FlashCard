@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_01_18_001100) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_19_000100) do
   create_table "flash_card_chunks", force: :cascade do |t|
     t.boolean "approved", default: false, null: false
     t.text "content_text", null: false
@@ -62,6 +62,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_18_001100) do
     t.index ["flash_card_request_id", "chunk_index"], name: "index_flash_cards_on_flash_card_request_id_and_chunk_index"
     t.index ["flash_card_request_id"], name: "index_flash_cards_on_flash_card_request_id"
     t.index ["status"], name: "index_flash_cards_on_status"
+  end
+
+  create_table "rulebook_chunks", force: :cascade do |t|
+    t.integer "chunk_index", null: false
+    t.text "chunk_text", null: false
+    t.datetime "created_at", null: false
+    t.string "pdf_path", null: false
+    t.string "status", default: "pending", null: false
+    t.text "units_json"
+    t.datetime "updated_at", null: false
+    t.index ["pdf_path", "chunk_index"], name: "index_rulebook_chunks_on_pdf_path_and_chunk_index", unique: true
+    t.index ["pdf_path", "status"], name: "index_rulebook_chunks_on_pdf_path_and_status"
   end
 
   add_foreign_key "flash_card_chunks", "flash_card_requests"
