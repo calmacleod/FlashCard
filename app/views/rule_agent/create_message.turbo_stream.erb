@@ -1,0 +1,11 @@
+<%= turbo_stream.append "messages" do %>
+  <%= render "message", message: { "role" => "user", "content" => @user_message } %>
+<% end %>
+
+<%= turbo_stream.append "messages" do %>
+  <%= render "message", message: { "role" => "assistant", "content" => @assistant_message } %>
+<% end %>
+
+<%= turbo_stream.replace "token-usage" do %>
+  <%= render "token_usage", tokens: @tokens %>
+<% end %>

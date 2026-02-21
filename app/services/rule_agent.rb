@@ -5,7 +5,7 @@ class RuleAgent
     Cite the specific rule, section, and article numbers in your answers.
   PROMPT
 
-  def self.run(source_csv:, model: "llama3.2:3b", debug: false)
+  def self.run(source_csv:, model: "gemini-2.5-flash-lite", debug: false)
     new(source_csv:, model:, debug:).run
   end
 
@@ -24,6 +24,7 @@ class RuleAgent
     chat = RubyLLM.chat(model: @model)
                   .with_instructions(SYSTEM_PROMPT)
                   .with_tool(RuleSearchTool.new(source_csv: @source_csv))
+                  .with_tool(RuleDefinitionLookupTool.new(source_csv: @source_csv))
 
     @input_tokens  = 0
     @output_tokens = 0

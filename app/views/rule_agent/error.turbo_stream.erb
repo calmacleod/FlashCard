@@ -1,0 +1,10 @@
+<%= turbo_stream.append "messages" do %>
+  <%= render "message", message: { "role" => "user", "content" => @user_message } %>
+<% end %>
+
+<%= turbo_stream.append "messages" do %>
+  <div class="message message--error">
+    <div class="message__role">Error</div>
+    <div class="message__content"><%= @error_message %></div>
+  </div>
+<% end %>

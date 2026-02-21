@@ -20,6 +20,10 @@ Rails.application.routes.draw do
   get  "rule_search",        to: "rule_search#index",  as: :rule_search
   get  "rule_search/search", to: "rule_search#search", as: :rule_search_search
 
+  get    "rule_agent",          to: "rule_agent#index",          as: :rule_agent
+  post   "rule_agent/messages", to: "rule_agent#create_message", as: :rule_agent_messages
+  delete "rule_agent",          to: "rule_agent#clear"
+
   mount MissionControl::Jobs::Engine, at: "/jobs"
 
   # Turbo Streams over Action Cable

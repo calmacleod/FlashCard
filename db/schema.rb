@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_20_192930) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_20_233053) do
   create_table "flash_card_chunks", force: :cascade do |t|
     t.boolean "approved", default: false, null: false
     t.text "content_text", null: false
@@ -62,6 +62,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_20_192930) do
     t.index ["flash_card_request_id", "chunk_index"], name: "index_flash_cards_on_flash_card_request_id_and_chunk_index"
     t.index ["flash_card_request_id"], name: "index_flash_cards_on_flash_card_request_id"
     t.index ["status"], name: "index_flash_cards_on_status"
+  end
+
+  create_table "rule_agent_conversations", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.text "messages"
+    t.string "session_token", null: false
+    t.string "source_csv"
+    t.integer "tokens_input"
+    t.integer "tokens_output"
+    t.datetime "updated_at", null: false
+    t.index ["session_token"], name: "index_rule_agent_conversations_on_session_token", unique: true
   end
 
   create_table "rulebook_chunks", force: :cascade do |t|
