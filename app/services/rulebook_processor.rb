@@ -63,6 +63,23 @@ class RulebookProcessor
     puts "Cleared #{deleted} chunk(s) for #{File.basename(pdf_path)}"
   end
 
+  # Run from console to see which lines RUNNING_HEADER_RE removes that contain needle:
+  #   RulebookProcessor.debug_running_header('path/to.pdf', 'Article 2')
+  def self.debug_running_header(pdf_path, needle)
+    instance = new(pdf_path, model: "")
+    raw      = instance.send(:extract_text).gsub(/\f/, "\n")
+
+    puts "=== Lines matched (will be removed) by RUNNING_HEADER_RE ==="
+    raw.each_line do |line|
+      puts "  #{line.chomp.inspect}" if line.match?(RUNNING_HEADER_RE) && line.include?(needle)
+    end
+
+    puts "\n=== All lines containing '#{needle}' ==="
+    raw.each_line.with_index do |line, i|
+      puts "  [#{i}] #{line.chomp.inspect}" if line.include?(needle)
+    end
+  end
+
   def initialize(pdf_path, model:, delay: 0, max_tokens: nil)
     @pdf_path   = pdf_path
     @model      = model
@@ -188,6 +205,24 @@ class RulebookProcessor
     \s*$
   /xi
 
+  # Chapter title block that appears at the top of each chapter's page:
+  #   The Canadian Amateur Rule Book
+  #   for Tackle Football
+  #   Rule 9                    ← variable
+  #   Miscellaneous             ← variable
+  # Full four-line chapter header block:
+  #   The Canadian Amateur Rule Book
+  #   for Tackle Football
+  #   Rule N
+  #   Chapter Name
+  CHAPTER_HEADER_RE = /^[ \t]*The Canadian Amateur Rule Book[ \t]*\n[ \t]*for Tackle Football[ \t]*\n[ \t]*[^\n]+\n[ \t]*[^\n]+/i
+
+  # Orphaned two-line chapter label left behind when the title lines are on a
+  # different page (or already stripped):
+  #   Rule N
+  #   Chapter Name
+  CHAPTER_LABEL_RE = /^[ \t]*Rule\s+\d+[ \t]*\n[ \t]*[A-Z][^\n]{0,60}[ \t]*$/
+
   # Standalone page numbers: a line containing only digits (optionally preceded
   # or followed by whitespace). Anchored to the full line to avoid stripping
   # numbers embedded in content.
@@ -203,15 +238,17 @@ class RulebookProcessor
   #   "Rule N Section N Article N   <spaces>   Chapter Title"
   # The distinguishing feature is 3+ spaces separating two halves where one half
   # contains a Rule/Section/Article reference.
-  RULE_REF = /(?:Rule|Section|Article)\s+[\dA-Z][\w.]*/i
+  # Matches running page headers of the form:
+  #   "Chapter Title   <spaces>   Rule N Section N Article N"
+  #   "Rule N Section N Article N   <spaces>   Chapter Title"
+  FULL_RULE_REF = /Rule\s+\d+\s+Section\s+\d+\s+Article\s+\d+/i
   RUNNING_HEADER_RE = /
-    ^                          # start of line
-    (?!\s*Section\s+\d+\s*:)  # not a real Section heading  e.g. "Section 8:"
+    ^
     (?:
-      .+? \s{3,} #{RULE_REF} (?:\s+#{RULE_REF})* |   # "Title   Rule N Section N"
-      #{RULE_REF} (?:\s+#{RULE_REF})* \s{3,} .+?      # "Rule N Section N   Title"
+      .+ \s{3,} #{FULL_RULE_REF} |   # "Chapter Title   Rule N Section N Article N"
+      #{FULL_RULE_REF} \s{3,} .+      # "Rule N Section N Article N   Chapter Title"
     )
-    \s*$                       # end of line
+    \s*$
   /xi
 
   def extract_text
@@ -225,6 +262,8 @@ class RulebookProcessor
     text
       .gsub(/\f/, "\n")          # form feeds → newlines so ^ anchors work
       .gsub(BOILERPLATE_RE, "")
+      .gsub(CHAPTER_HEADER_RE, "")
+      .gsub(CHAPTER_LABEL_RE, "")
       .gsub(RUNNING_HEADER_RE, "")
       .gsub(PAGE_NUMBER_RE, "")
       .gsub(CB_REFERENCE_RE, "")
@@ -263,7 +302,7 @@ class RulebookProcessor
 
   def flush_buffer(chunks, buffer)
     return if buffer.empty?
-    chunks << buffer.join("\n\n")
+    chunks << buffer.join("\n")
   end
 
   def build_chunks(text)
@@ -274,27 +313,24 @@ class RulebookProcessor
     buffer     = []
     word_count = 0
 
-    puts "MAX WORDS: #{@max_words}"
-    puts "HELLO?"
-
     paragraphs.each do |para|
       pw = para.split.size
 
       flush = if rule_header?(para) && buffer.any?
                 # Always split at a Rule boundary
                 true
-              elsif section_header?(para) && buffer.any?
+      elsif section_header?(para) && buffer.any?
                 # Always split at a Section boundary
                 true
-              elsif article_header?(para) && word_count >= TARGET_MIN_WORDS && buffer.any?
+      elsif article_header?(para) && word_count >= TARGET_MIN_WORDS && buffer.any?
                 # Split at an Article boundary only when the chunk is already long enough
                 true
-              elsif @max_words && buffer.any? && word_count + pw > @max_words
+      elsif @max_words && buffer.any? && word_count + pw > @max_words
                 # Hard cap: flush before adding a paragraph that would exceed the token limit
                 true
-              else
+      else
                 false
-              end
+      end
 
       if flush
         flush_buffer(chunks, buffer)

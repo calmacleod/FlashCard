@@ -3,7 +3,14 @@
     <h1>Rule Search</h1>
   </div>
 
-  <%= form_with url: rule_search_search_path, method: :get, data: { turbo_frame: "search-results", turbo_action: "advance", controller: "rule-filter", "rule-filter-rules-by-source-value": @rule_numbers_by_source.to_json } do |f| %>
+  <%= form_with url: rule_search_search_path, method: :get, data: {
+        turbo_frame: "search-results",
+        turbo_action: "advance",
+        controller: "rule-filter",
+        "rule-filter-rules-by-source-value": @rule_numbers_by_source.to_json,
+        "rule-filter-sections-by-rule-value": @sections_by_rule.to_json,
+        "rule-filter-articles-by-section-value": @articles_by_section.to_json
+      } do |f| %>
     <div class="card" style="margin-bottom: 1.5rem;">
       <div class="form-grid">
         <div>
@@ -20,11 +27,27 @@
         </div>
 
         <div>
-          <%= f.label :rule_number, "Filter by rule number" %>
+          <%= f.label :rule_number, "Filter by rule" %>
           <%= f.select :rule_number,
               options_for_select([["All rules", ""]] + @rule_numbers.map { |r| [r, r] }, params[:rule_number]),
               {},
-              { data: { "rule-filter-target": "ruleNumber" } } %>
+              { data: { "rule-filter-target": "ruleNumber", action: "change->rule-filter#filterSections" } } %>
+        </div>
+
+        <div>
+          <%= f.label :section, "Filter by section" %>
+          <%= f.select :section,
+              options_for_select([["All sections", ""]] + RulebookEntry.where.not(section: [nil, ""]).distinct.order(:section).pluck(:section).map { |s| [s, s] }, params[:section]),
+              {},
+              { data: { "rule-filter-target": "section", action: "change->rule-filter#filterArticles" } } %>
+        </div>
+
+        <div>
+          <%= f.label :article, "Filter by article" %>
+          <%= f.select :article,
+              options_for_select([["All articles", ""]] + RulebookEntry.where.not(article: [nil, ""]).distinct.order(:article).pluck(:article).map { |a| [a, a] }, params[:article]),
+              {},
+              { data: { "rule-filter-target": "article" } } %>
         </div>
 
         <div style="display: flex; gap: 0.5rem; align-items: flex-end;">
@@ -51,7 +74,7 @@
           </div>
         <% end %>
       </div>
-    <% elsif params[:query].present? %>
+    <% elsif params[:query].present? || params[:rule_number].present? || params[:section].present? || params[:article].present? %>
       <p class="meta">No results found.</p>
     <% end %>
   <% end %>
