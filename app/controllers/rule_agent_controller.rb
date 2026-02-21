@@ -26,6 +26,10 @@ class RuleAgentController < ApplicationController
 
     response = chat.ask(input)
 
+    if response.content.blank?
+      response = chat.ask("Please summarize the results you just retrieved from the tools and answer my question.")
+    end
+
     assistant_content = response.content.presence || "(The model returned an empty response. Please try again.)"
 
     conversation.add_turn(
@@ -52,14 +56,15 @@ class RuleAgentController < ApplicationController
 
   def clear
     find_or_create_conversation.destroy
-    session.delete(:rule_agent_token)
+    cookies.delete(:rule_agent_token)
     redirect_to rule_agent_path
   end
 
   private
 
   def find_or_create_conversation
-    token = session[:rule_agent_token] ||= SecureRandom.hex(16)
+    token = cookies[:rule_agent_token].presence || SecureRandom.hex(16)
+    cookies[:rule_agent_token] = { value: token, expires: 1.year, same_site: :lax } unless cookies[:rule_agent_token]
     RuleAgentConversation.find_or_create_by!(session_token: token)
   end
 end

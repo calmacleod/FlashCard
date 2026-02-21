@@ -1,9 +1,14 @@
-<div class="rule-agent" data-controller="rule-agent">
+<div class="rule-agent" data-controller="rule-agent" data-rule-agent-token-value="<%= @conversation.session_token %>">
   <div class="rule-agent__header">
     <h1>Rule Agent</h1>
     <div class="rule-agent__controls">
+      <button type="button" class="btn btn--ghost btn--sm"
+              data-action="rule-agent#toggleFullscreen"
+              data-rule-agent-target="fullscreenBtn"
+              aria-label="Toggle fullscreen">Fullscreen</button>
       <%= form_with url: rule_agent_path, method: :delete, data: { turbo_confirm: "Clear conversation?" } do %>
-        <button type="submit" class="btn btn--ghost btn--sm">Clear</button>
+        <button type="submit" class="btn btn--ghost btn--sm"
+                data-action="rule-agent#clearStorage">Clear</button>
       <% end %>
     </div>
   </div>
@@ -21,7 +26,7 @@
 
   <div class="rule-agent__form">
     <%= form_with url: rule_agent_messages_path,
-                  data: { turbo_stream: true, action: "turbo:submit-end->rule-agent#onSubmitEnd", rule_agent_target: "form" } do |f| %>
+                  data: { turbo_stream: true, action: "submit->rule-agent#onSubmit turbo:submit-end->rule-agent#onSubmitEnd", rule_agent_target: "form" } do |f| %>
       <div class="rule-agent__selects">
         <%= select_tag :source_csv, options_for_select(@sources.map { |s| [File.basename(s), s] }, @source),
               class: "rule-agent__source-select" %>

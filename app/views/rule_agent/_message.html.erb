@@ -1,4 +1,4 @@
 <div class="message message--<%= message["role"] %>">
   <div class="message__role"><%= message["role"] == "user" ? "You" : "Agent" %></div>
-  <div class="message__content"><%= simple_format(message["content"]) %></div>
+  <div class="message__content"><%= markdown(message["content"]) %></div>
 </div>

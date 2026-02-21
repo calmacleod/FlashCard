@@ -3,9 +3,12 @@ class RuleDefinitionLookupTool < RubyLLM::Tool
               "Use this when you know (or the user has cited) specific identifiers rather than a keyword query."
 
   params do
-    string :rule_number, required: false, description: "Rule number, e.g. 'Rule 3' or '3'"
-    string :section,     required: false, description: "Section number or title, e.g. '3.2' or 'Section 2'"
-    string :article,     required: false, description: "Article number or title, e.g. 'Article 1' or '1a'"
+    string :rule_number, required: false,
+           description: "The rule number only, e.g. '4' or 'Rule 4'. Do NOT include the section or article here."
+    string :section,     required: false,
+           description: "The section number only, e.g. '2' or 'Section 2'. Do NOT use dotted notation like '4.2' — pass each part separately."
+    string :article,     required: false,
+           description: "The article number only, e.g. '4' or 'Article 4'. Do NOT prefix with the rule or section number."
   end
 
   def initialize(source_csv:)
