@@ -1,5 +1,5 @@
 <%= turbo_stream.append "messages" do %>
-  <%= render "message", message: { "role" => "assistant", "content" => @assistant_message } %>
+  <%= render "message", message: @assistant_message_record %>
 <% end %>
 
 <%= turbo_stream.replace "token-usage" do %>

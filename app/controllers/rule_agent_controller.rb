@@ -1,10 +1,10 @@
 class RuleAgentController < ApplicationController
   def index
-    @sources      = RulebookEntry.distinct.pluck(:source_csv).sort
-    @conversation = find_or_create_conversation
-    @source       = @conversation.source_csv || @sources.first
-    @messages     = @conversation.messages
-    @tokens       = @conversation.tokens
+    @sources  = RulebookEntry.distinct.pluck(:source_csv).sort
+    @chat     = find_or_create_chat
+    @source   = @chat.source_csv || @sources.first
+    @messages = @chat.messages.where(role: %w[user assistant]).order(:created_at)
+    @tokens   = @chat.tokens
   end
 
   def create_message
@@ -12,40 +12,28 @@ class RuleAgentController < ApplicationController
     input  = params[:message].to_s.strip
     return head :bad_request if input.blank?
 
-    conversation = find_or_create_conversation
-    conversation.update!(source_csv: source)
+    chat = find_or_create_chat
+    chat.update!(source_csv: source)
 
     base_url = "#{request.scheme}://#{request.host_with_port}"
-    chat = RubyLLM.chat(model: params[:model].presence || "gemini-2.5-flash-lite")
-                  .with_instructions(RuleAgent::SYSTEM_PROMPT)
-                  .with_tool(RuleSearchTool.new(source_csv: source))
-                  .with_tool(RuleDefinitionLookupTool.new(source_csv: source))
-                  .with_tool(RuleReferenceLinkTool.new(source_csv: source, base_url: base_url))
-
-    conversation.messages.each do |msg|
-      chat.messages << RubyLLM::Message.new(role: msg["role"].to_sym, content: msg["content"])
-    end
-
-    response = chat.ask(input)
+    agent    = RuleAgent.find(chat.id, source_csv: source, base_url: base_url)
+    response = agent.ask(input)
 
     if response.content.blank?
-      response = chat.ask("Please summarize the results you just retrieved from the tools and answer my question.")
+      response = agent.ask("Please summarize the results you just retrieved from the tools and answer my question.")
     end
 
-    assistant_content = format_reference_links(
+    formatted = format_reference_links(
       response.content.presence || "(The model returned an empty response. Please try again.)"
     )
 
-    conversation.add_turn(
-      user_input:        input,
-      assistant_content: assistant_content,
-      input_tokens:      response.input_tokens,
-      output_tokens:     response.output_tokens
-    )
+    last_message = chat.messages.where(role: :assistant).last
+    last_message.update!(content: formatted) if last_message
 
-    @user_message      = input
-    @assistant_message = assistant_content
-    @tokens            = conversation.tokens
+    @user_message             = input
+    @assistant_message        = formatted
+    @assistant_message_record = last_message
+    @tokens                   = chat.tokens
 
     respond_to do |format|
       format.turbo_stream
@@ -59,7 +47,7 @@ class RuleAgentController < ApplicationController
   end
 
   def clear
-    find_or_create_conversation.destroy
+    find_or_create_chat.destroy
     cookies.delete(:rule_agent_token)
     redirect_to rule_agent_path
   end
@@ -70,7 +58,6 @@ class RuleAgentController < ApplicationController
   # wrap it in [label](url) syntax so Redcarpet renders it as a clickable link.
   def format_reference_links(content)
     content.gsub(/(?<!\()https?:\/\/\S+\/rule_search\/search\S*/) do |url|
-      # Skip if already wrapped as a markdown link: [text](url)
       next url if content.match?(/\[[^\]]+\]\(#{Regexp.escape(url)}\)/)
 
       params = Rack::Utils.parse_query(URI.parse(url).query)
@@ -80,9 +67,12 @@ class RuleAgentController < ApplicationController
     end
   end
 
-  def find_or_create_conversation
+  def find_or_create_chat
     token = cookies[:rule_agent_token].presence || SecureRandom.hex(16)
     cookies[:rule_agent_token] = { value: token, expires: 1.year, same_site: :lax } unless cookies[:rule_agent_token]
-    RuleAgentConversation.find_or_create_by!(session_token: token)
+    model_name = params[:model].presence || "gemini-2.5-flash-lite"
+    Chat.find_or_create_by!(session_token: token) do |c|
+      c.model = Model.find_by(model_id: model_name)
+    end
   end
 end

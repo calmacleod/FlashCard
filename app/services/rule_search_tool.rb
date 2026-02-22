@@ -13,7 +13,9 @@ class RuleSearchTool < RubyLLM::Tool
     super()
   end
 
-  def execute(query:, rule_number: nil, section: nil, article: nil)
+  def execute(query: nil, rule_number: nil, section: nil, article: nil)
+    return "Error: a descriptive query phrase is required. Do not call this tool with only filter parameters." if query.blank?
+
     results = RuleSearcher.search(query, source_csv: @source_csv, rule_number: rule_number, section: section, article: article, limit: 5)
     return "No relevant rules found." if results.empty?
 

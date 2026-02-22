@@ -1,5 +1,9 @@
-class RuleAgent
-  SYSTEM_PROMPT = <<~PROMPT
+class RuleAgent < RubyLLM::Agent
+  chat_model Chat
+  model "gemini-2.5-flash-lite"
+  inputs :source_csv, :base_url
+
+  instructions <<~PROMPT
     You are a gridiron football rules expert assistant with deep analytical skills. You are fluent in gridiron football terminology — positions, play types, penalties, scoring, field zones, officials, and common informal terms used by coaches, players, and fans. Follow these guidelines when answering questions:
 
     1. **Always search first.** Before responding, use the search tool to find relevant rules. Do not answer from memory alone.
@@ -27,30 +31,26 @@ class RuleAgent
     12. **Generate reference links.** After composing your answer, call the reference link tool once for each distinct rule, section, or article you cited. When calling this tool, you MUST pass the exact rule_number, section, and article identifiers as you found them in the search results — the tool uses these to build pre-filtered URLs, so they must be precise. Collect all the returned links and append them at the very end of your response under a `### References` heading. Each link should open in a new tab (the link tool handles this). Do not skip this step.
   PROMPT
 
+  tools do
+    [
+      RuleSearchTool.new(source_csv: source_csv),
+      RuleDefinitionLookupTool.new(source_csv: source_csv),
+      RuleReferenceLinkTool.new(source_csv: source_csv, base_url: base_url)
+    ]
+  end
+
+  # CLI entry point: creates a transient agent and runs an interactive REPL loop.
   def self.run(source_csv:, model: "gemini-2.5-flash-lite", debug: false)
-    new(source_csv:, model:, debug:).run
-  end
+    RubyLLM.configure { |c| c.logger = Logger.new(IO::NULL) } unless debug
 
-  def initialize(source_csv:, model:, debug: false)
-    @source_csv = File.expand_path(source_csv)
-    @model      = model
-    @debug      = debug
-  end
+    source_csv = File.expand_path(source_csv)
+    agent = new(source_csv: source_csv)
 
-  def run
-    puts "Rule Agent ready. Searching: #{File.basename(@source_csv)}"
-    puts "Model: #{@model}  (type 'exit' to quit)\n\n"
+    puts "Rule Agent ready. Searching: #{File.basename(source_csv)}"
+    puts "Model: #{model}  (type 'exit' to quit)\n\n"
 
-    RubyLLM.configure { |c| c.logger = Logger.new(IO::NULL) } unless @debug
-
-    chat = RubyLLM.chat(model: @model)
-                  .with_instructions(SYSTEM_PROMPT)
-                  .with_tool(RuleSearchTool.new(source_csv: @source_csv))
-                  .with_tool(RuleDefinitionLookupTool.new(source_csv: @source_csv))
-                  .with_tool(RuleReferenceLinkTool.new(source_csv: @source_csv))
-
-    @input_tokens  = 0
-    @output_tokens = 0
+    input_tokens  = 0
+    output_tokens = 0
 
     loop do
       print "You: "
@@ -58,30 +58,24 @@ class RuleAgent
       break if input.nil? || input.downcase == "exit"
       next if input.empty?
 
-      response = chat.ask(input)
-      @input_tokens  += response.input_tokens.to_i
-      @output_tokens += response.output_tokens.to_i
+      response = agent.ask(input)
+      input_tokens  += response.input_tokens.to_i
+      output_tokens += response.output_tokens.to_i
 
       if response.content.nil? || response.content.strip.empty?
-        response = chat.ask("Please summarize the results you just retrieved from the tools and answer my question.")
-        @input_tokens  += response.input_tokens.to_i
-        @output_tokens += response.output_tokens.to_i
+        response = agent.ask("Please summarize the results you just retrieved from the tools and answer my question.")
+        input_tokens  += response.input_tokens.to_i
+        output_tokens += response.output_tokens.to_i
       end
 
       puts "\nAgent: #{response.content}\n\n"
     end
 
-    print_token_summary
-  end
-
-  private
-
-  def print_token_summary
-    total = @input_tokens + @output_tokens
+    total = input_tokens + output_tokens
     puts "─" * 40
     puts "Token usage:"
-    puts "  Input:  #{@input_tokens.to_s.rjust(10)}"
-    puts "  Output: #{@output_tokens.to_s.rjust(10)}"
+    puts "  Input:  #{input_tokens.to_s.rjust(10)}"
+    puts "  Output: #{output_tokens.to_s.rjust(10)}"
     puts "  Total:  #{total.to_s.rjust(10)}"
   end
 end
