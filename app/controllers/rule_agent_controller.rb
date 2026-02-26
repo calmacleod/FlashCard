@@ -29,9 +29,9 @@ class RuleAgentController < ApplicationController
 
     assistant_messages = chat.messages.where(role: :assistant).order(:created_at)
     last_message = assistant_messages.last
-    # Destroy all intermediate assistant messages (tool-call stubs with no text)
+    # Destroy intermediate assistant messages that have no text AND no tool calls
     assistant_messages.where.not(id: last_message.id).each do |m|
-      m.destroy if m.content.blank?
+      m.destroy if m.content.blank? && m.tool_calls.empty?
     end
     last_message&.update!(content: formatted)
 
