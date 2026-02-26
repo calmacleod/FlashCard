@@ -1,0 +1,23 @@
+<% content_for :title, "Rulebooks" %>
+
+<div class="page">
+  <div class="headline">
+    <h1>Rulebooks</h1>
+  </div>
+
+  <% if @source_csvs.empty? %>
+    <div class="card">
+      <p>No rulebooks loaded yet.</p>
+    </div>
+  <% else %>
+    <div class="card">
+      <ul class="rulebook-list">
+        <% @source_csvs.each do |csv| %>
+          <li>
+            <%= link_to File.basename(csv), rulebook_show_path(source_csv: csv) %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+</div>

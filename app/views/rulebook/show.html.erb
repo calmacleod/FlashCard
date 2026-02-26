@@ -1,0 +1,55 @@
+<% content_for :title, File.basename(@source_csv) %>
+
+<div class="page">
+  <div class="headline">
+    <h1><%= File.basename(@source_csv) %></h1>
+    <%= link_to "← Back to Rulebooks", rulebook_path, class: "rulebook-back" %>
+  </div>
+
+  <% if @grouped.empty? %>
+    <div class="card">
+      <p>No entries found for this rulebook.</p>
+    </div>
+  <% else %>
+    <div class="rulebook-viewer">
+      <% @grouped.each do |rule_number, sections| %>
+        <details class="rulebook-rule" open>
+          <summary class="rulebook-rule__summary"><%= rule_number.presence || "General" %></summary>
+
+          <div class="rulebook-rule__body">
+            <% sections.each do |section, articles| %>
+              <% if section.present? %>
+                <details class="rulebook-section" open>
+                  <summary class="rulebook-section__summary"><%= section %></summary>
+                  <div class="rulebook-section__body">
+                    <% articles.each do |article, entries| %>
+                      <div class="rulebook-article">
+                        <% if article.present? %>
+                          <p class="rulebook-article__label"><strong><%= article %></strong></p>
+                        <% end %>
+                        <% entries.each do |entry| %>
+                          <p class="rulebook-entry__text"><%= entry.text %></p>
+                        <% end %>
+                      </div>
+                    <% end %>
+                  </div>
+                </details>
+              <% else %>
+                <% articles.each do |article, entries| %>
+                  <div class="rulebook-article">
+                    <% if article.present? %>
+                      <p class="rulebook-article__label"><strong><%= article %></strong></p>
+                    <% end %>
+                    <% entries.each do |entry| %>
+                      <p class="rulebook-entry__text"><%= entry.text %></p>
+                    <% end %>
+                  </div>
+                <% end %>
+              <% end %>
+            <% end %>
+          </div>
+        </details>
+      <% end %>
+    </div>
+  <% end %>
+</div>

@@ -17,6 +17,9 @@ Rails.application.routes.draw do
     post :rechunk, on: :member
   end
 
+  get "rulebook",      to: "rulebook#index", as: :rulebook
+  get "rulebook/show", to: "rulebook#show",  as: :rulebook_show
+
   get  "rule_search",        to: "rule_search#index",  as: :rule_search
   get  "rule_search/search", to: "rule_search#search", as: :rule_search_search
 
