@@ -15,6 +15,8 @@ class RuleAgentController < ApplicationController
     return head :bad_request if input.blank?
 
     chat = find_or_create_chat
+    model_name = params[:model].presence || "gemini-2.5-flash-lite"
+    chat.with_model(model_name) if chat.model_id != model_name
     chat.update!(source_csv: source)
 
     chat.add_message(role: :user, content: input)

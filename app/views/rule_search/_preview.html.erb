@@ -1,0 +1,13 @@
+<% if entries.any? %>
+  <% entries.each do |entry| %>
+    <div class="rule-preview__entry">
+      <div class="rule-preview__label">
+        <% parts = [entry[:rule_number].present? ? "Rule #{entry[:rule_number]}" : nil, entry[:section].present? ? "Section #{entry[:section]}" : nil, entry[:article].present? ? "Article #{entry[:article]}" : nil].compact %>
+        <strong><%= parts.join(" › ") %></strong>
+      </div>
+      <div class="rule-preview__text"><%= simple_format(entry[:text]) %></div>
+    </div>
+  <% end %>
+<% else %>
+  <p class="rule-preview__empty">No rule found.</p>
+<% end %>

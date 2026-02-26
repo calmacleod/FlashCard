@@ -1,5 +1,7 @@
 <%= turbo_stream_from "rule_agent_#{@chat.id}" %>
-<div class="rule-agent" data-controller="rule-agent" data-rule-agent-token-value="<%= @chat.session_token %>">
+<div class="rule-agent" data-controller="rule-agent rule-preview"
+     data-rule-agent-token-value="<%= @chat.session_token %>"
+     data-rule-preview-url-value="<%= rule_search_preview_path %>">
   <div class="rule-agent__header">
     <h1>Rule Agent</h1>
     <div class="rule-agent__controls">
@@ -25,6 +27,16 @@
 
   <%= render "token_usage", tokens: @tokens %>
 
+  <div class="rule-preview-modal" data-rule-preview-target="modal" aria-hidden="true">
+    <div class="rule-preview-modal__backdrop" data-action="click->rule-preview#close"></div>
+    <div class="rule-preview-modal__dialog">
+      <button class="rule-preview-modal__close" data-action="click->rule-preview#close" aria-label="Close">✕</button>
+      <div class="rule-preview-modal__body" data-rule-preview-target="body">
+        <p class="rule-preview__loading">Loading…</p>
+      </div>
+    </div>
+  </div>
+
   <div class="rule-agent__form">
     <%= form_with url: rule_agent_messages_path,
                   data: { turbo_stream: true, action: "submit->rule-agent#onSubmit turbo:submit-end->rule-agent#onSubmitEnd", rule_agent_target: "form" } do |f| %>
@@ -33,9 +45,10 @@
               class: "rule-agent__source-select" %>
         <%= select_tag :model, options_for_select([
               ["gemini-2.5-flash-lite", "gemini-2.5-flash-lite"],
+              ["gpt-5.2", "gpt-5.2"],
               ["gemini-2.0-flash",      "gemini-2.0-flash"],
               ["gemini-2.5-flash",      "gemini-2.5-flash"],
-            ], params[:model] || "gemini-2.5-flash-lite"),
+            ], @chat.model_id || "gemini-2.5-flash-lite"),
               class: "rule-agent__source-select" %>
       </div>
       <div class="rule-agent__input-row">

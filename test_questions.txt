@@ -14,3 +14,15 @@ Team B may decline a time count penalty to start the clock on the Referee's sign
 In the following situation should Team A be awarded a touchdown:
 
 With 10 seconds to play in the game, Team A is 3D-and-10 at the A40-yard line. The ball is handed off to A35 who breaks free and is running down the sideline. B57 leaves the bench and tackles A35 on the B20-yard line. The Officials decide A35 may not have scored, had he not been interfered with. 
+
+4.
+Based on the following scenario:
+
+Team A throws a forward pass to receiver A29 near the sideline.  A29 gets pushed out of bounds by a defender, and is returning to the field of play when they leap to catch the ball. When A29 jumps, one foot is touching the sideline. The ball is caught in the air and  A29 lands in bounds
+
+Which of the following are true:
+
+Incomplete Pass
+Illegal Participation
+The play is dead when the receiver touches the ball.
+Completed Pass

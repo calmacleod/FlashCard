@@ -20,8 +20,9 @@ Rails.application.routes.draw do
   get "rulebook",      to: "rulebook#index", as: :rulebook
   get "rulebook/show", to: "rulebook#show",  as: :rulebook_show
 
-  get  "rule_search",        to: "rule_search#index",  as: :rule_search
-  get  "rule_search/search", to: "rule_search#search", as: :rule_search_search
+  get  "rule_search",         to: "rule_search#index",   as: :rule_search
+  get  "rule_search/search",  to: "rule_search#search",  as: :rule_search_search
+  get  "rule_search/preview", to: "rule_search#preview", as: :rule_search_preview
 
   get    "rule_agent",          to: "rule_agent#index",          as: :rule_agent
   post   "rule_agent/messages", to: "rule_agent#create_message", as: :rule_agent_messages

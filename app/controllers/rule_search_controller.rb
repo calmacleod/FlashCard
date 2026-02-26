@@ -4,6 +4,31 @@ class RuleSearchController < ApplicationController
     @results = []
   end
 
+  def preview
+    source_csv  = params[:source_csv].presence
+    rule_number = params[:rule_number].presence
+    section     = params[:section].presence
+    article     = params[:article].presence
+
+    query_parts = [
+      rule_number.present? ? "Rule #{rule_number}" : nil,
+      section.present?     ? "Section #{section}"  : nil,
+      article.present?     ? "Article #{article}"  : nil
+    ].compact
+    query = query_parts.any? ? query_parts.join(" ") : "."
+
+    results = RuleSearcher.search(
+      query,
+      source_csv:,
+      rule_number:,
+      section:,
+      article:,
+      limit: 10
+    )
+
+    render partial: "preview", locals: { entries: results }
+  end
+
   def search
     load_filter_data
     @query      = params[:query]
