@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_22_015610) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_26_014348) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -40,11 +40,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_22_015610) do
   end
 
   create_table "chats", force: :cascade do |t|
+    t.string "browser_token"
     t.datetime "created_at", null: false
     t.integer "model_id"
     t.string "session_token"
     t.string "source_csv"
+    t.string "title"
     t.datetime "updated_at", null: false
+    t.index ["browser_token"], name: "index_chats_on_browser_token"
     t.index ["model_id"], name: "index_chats_on_model_id"
     t.index ["session_token"], name: "index_chats_on_session_token", unique: true
   end

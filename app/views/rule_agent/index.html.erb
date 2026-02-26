@@ -1,3 +1,22 @@
+<% content_for :sidebar_extra do %>
+  <div class="sidebar-section">
+    <span class="sidebar-label">Conversations</span>
+    <%= form_with url: new_rule_agent_chat_path, method: :post do %>
+      <button type="submit" class="btn btn--ghost btn--sm chat-history__new-btn">+ New conversation</button>
+    <% end %>
+    <% if @past_chats.any? %>
+      <nav class="chat-history" aria-label="Past conversations">
+        <% @past_chats.each do |chat| %>
+          <%= link_to rule_agent_path(chat: chat.session_token), class: "chat-history__item" do %>
+            <span class="chat-history__title"><%= chat.title.presence || "Untitled" %></span>
+            <span class="chat-history__date"><%= chat.updated_at.strftime("%-d %b") %></span>
+          <% end %>
+        <% end %>
+      </nav>
+    <% end %>
+  </div>
+<% end %>
+
 <%= turbo_stream_from "rule_agent_#{@chat.id}" %>
 <div class="rule-agent" data-controller="rule-agent rule-preview"
      data-rule-agent-token-value="<%= @chat.session_token %>"
@@ -9,9 +28,9 @@
               data-action="rule-agent#toggleFullscreen"
               data-rule-agent-target="fullscreenBtn"
               aria-label="Toggle fullscreen">Fullscreen</button>
-      <%= form_with url: rule_agent_path, method: :delete, data: { turbo_confirm: "Clear conversation?" } do %>
+      <%= form_with url: rule_agent_path, method: :delete, data: { turbo_confirm: "Delete this conversation?" } do %>
         <button type="submit" class="btn btn--ghost btn--sm"
-                data-action="rule-agent#clearStorage">Clear</button>
+                data-action="rule-agent#clearStorage">Delete</button>
       <% end %>
     </div>
   </div>

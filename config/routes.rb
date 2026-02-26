@@ -26,6 +26,7 @@ Rails.application.routes.draw do
 
   get    "rule_agent",          to: "rule_agent#index",          as: :rule_agent
   post   "rule_agent/messages", to: "rule_agent#create_message", as: :rule_agent_messages
+  post   "rule_agent/new",      to: "rule_agent#new_chat",       as: :new_rule_agent_chat
   delete "rule_agent",          to: "rule_agent#clear"
 
   mount MissionControl::Jobs::Engine, at: "/jobs"

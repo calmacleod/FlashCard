@@ -898,6 +898,49 @@ body.rule-agent-fullscreen .rule-agent {
   color: var(--text);
 }
 
+.chat-history__new-btn {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.chat-history {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.chat-history__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 8px;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  color: var(--text);
+  transition: background 100ms ease;
+  border: 1px solid transparent;
+}
+
+.chat-history__item:hover {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+.chat-history__title {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+
+.chat-history__date {
+  font-size: 11px;
+  color: var(--muted-2);
+}
+
 .sidebar-nav {
   display: flex;
   flex-direction: column;
