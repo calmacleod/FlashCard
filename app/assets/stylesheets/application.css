@@ -855,6 +855,40 @@ body.rule-agent-fullscreen .rule-agent {
   40%           { transform: scale(1);   opacity: 1; }
 }
 
+.message__thinking-block {
+  margin-bottom: 10px;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.message__thinking-summary {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+  cursor: pointer;
+  user-select: none;
+  background: #1e293b;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.message__thinking-summary:hover {
+  color: #cbd5e1;
+}
+
+.message__thinking-text {
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.6;
+  background: #0f172a;
+  white-space: pre-wrap;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
 .btn--sm {
   padding: 6px 12px;
   font-size: 13px;

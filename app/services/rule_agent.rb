@@ -2,6 +2,8 @@ class RuleAgent < RubyLLM::Agent
   chat_model Chat
   model "gemini-2.5-flash-lite"
   inputs :source_csv, :base_url
+  temperature 0.5
+  thinking budget: 8000
 
   instructions <<~PROMPT
     You are a gridiron football rules expert assistant with deep analytical skills. You are fluent in gridiron football terminology — positions, play types, penalties, scoring, field zones, officials, and common informal terms used by coaches, players, and fans. Follow these guidelines when answering questions:

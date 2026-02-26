@@ -1,7 +1,10 @@
+<%# Do NOT append the user message — Stimulus already added an optimistic bubble.
+    Append only the server-tracked thinking placeholder.
+    onSubmitEnd (turbo:submit-end) will remove the Stimulus #thinking-bubble.
+    The job will broadcast_replace_to this id when the response is ready. %>
 <%= turbo_stream.append "messages" do %>
-  <%= render "message", message: @assistant_message_record %>
-<% end %>
-
-<%= turbo_stream.replace "token-usage" do %>
-  <%= render "token_usage", tokens: @tokens %>
+  <div id="thinking_<%= @chat_id %>" class="message message--assistant message--thinking">
+    <div class="message__role">Agent</div>
+    <div class="message__content message__thinking"><span></span><span></span><span></span></div>
+  </div>
 <% end %>

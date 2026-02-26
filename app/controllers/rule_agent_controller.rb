@@ -3,7 +3,9 @@ class RuleAgentController < ApplicationController
     @sources  = RulebookEntry.distinct.pluck(:source_csv).sort
     @chat     = find_or_create_chat
     @source   = @chat.source_csv || @sources.first
-    @messages = @chat.messages.where(role: %w[user assistant]).order(:created_at)
+    user_msgs      = @chat.messages.where(role: :user)
+    assistant_msgs = @chat.messages.where(role: :assistant).where.not(content: [ nil, "" ])
+    @messages = user_msgs.or(assistant_msgs).order(:created_at)
     @tokens   = @chat.tokens
   end
 
@@ -15,39 +17,16 @@ class RuleAgentController < ApplicationController
     chat = find_or_create_chat
     chat.update!(source_csv: source)
 
+    chat.add_message(role: :user, content: input)
+    @user_message_record = chat.messages.where(role: :user).order(:created_at).last
+
     base_url = "#{request.scheme}://#{request.host_with_port}"
-    agent    = RuleAgent.find(chat.id, source_csv: source, base_url: base_url)
-    response = agent.ask(input)
+    RuleAgentJob.perform_later(chat.id, source, base_url)
 
-    if response.content.blank?
-      response = agent.ask("Please summarize the results you just retrieved from the tools and answer my question.")
-    end
-
-    formatted = format_reference_links(
-      response.content.presence || "(The model returned an empty response. Please try again.)"
-    )
-
-    assistant_messages = chat.messages.where(role: :assistant).order(:created_at)
-    last_message = assistant_messages.last
-    # Destroy intermediate assistant messages that have no text AND no tool calls
-    assistant_messages.where.not(id: last_message.id).each do |m|
-      m.destroy if m.content.blank? && m.tool_calls.empty?
-    end
-    last_message&.update!(content: formatted)
-
-    @user_message             = input
-    @assistant_message        = formatted
-    @assistant_message_record = last_message
-    @tokens                   = chat.tokens
+    @chat_id = chat.id
 
     respond_to do |format|
       format.turbo_stream
-    end
-  rescue RubyLLM::ServiceUnavailableError
-    @error_message = "The model is currently experiencing high demand. Please try again in a moment."
-    @user_message  = input
-    respond_to do |format|
-      format.turbo_stream { render :error }
     end
   end
 
@@ -57,11 +36,7 @@ class RuleAgentController < ApplicationController
     redirect_to rule_agent_path
   end
 
-  private
-
-  # If the LLM includes a bare rule_search URL instead of a markdown link,
-  # wrap it in [label](url) syntax so Redcarpet renders it as a clickable link.
-  def format_reference_links(content)
+  def self.format_reference_links_for(content)
     content.gsub(/(?<!\()https?:\/\/\S+\/rule_search\/search\S*/) do |url|
       next url if content.match?(/\[[^\]]+\]\(#{Regexp.escape(url)}\)/)
 
@@ -71,6 +46,8 @@ class RuleAgentController < ApplicationController
       "[#{label}](#{url})"
     end
   end
+
+  private
 
   def find_or_create_chat
     token = cookies[:rule_agent_token].presence || SecureRandom.hex(16)

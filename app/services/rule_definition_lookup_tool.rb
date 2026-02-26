@@ -2,14 +2,9 @@ class RuleDefinitionLookupTool < RubyLLM::Tool
   description "Look up the exact text of a rule by its Rule Number, Section Number, and/or Article Number. " \
               "Use this when you know (or the user has cited) specific identifiers rather than a keyword query."
 
-  params do
-    string :rule_number, required: false,
-           description: "The rule number only, e.g. '4' or 'Rule 4'. Do NOT include the section or article here."
-    string :section,     required: false,
-           description: "The section number only, e.g. '2' or 'Section 2'. Do NOT use dotted notation like '4.2' — pass each part separately."
-    string :article,     required: false,
-           description: "The article number only, e.g. '4' or 'Article 4'. Do NOT prefix with the rule or section number."
-  end
+  param :rule_number, desc: "The rule number only, e.g. '4' or 'Rule 4'. Do NOT include the section or article here."
+  param :section,     desc: "The section number only, e.g. '2' or 'Section 2'. Do NOT use dotted notation like '4.2' — pass each part separately.", required: false
+  param :article,     desc: "The article number only, e.g. '4' or 'Article 4'. Do NOT prefix with the rule or section number.", required: false
 
   def initialize(source_csv:)
     @source_csv = source_csv
