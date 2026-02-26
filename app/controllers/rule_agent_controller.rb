@@ -27,8 +27,13 @@ class RuleAgentController < ApplicationController
       response.content.presence || "(The model returned an empty response. Please try again.)"
     )
 
-    last_message = chat.messages.where(role: :assistant).last
-    last_message.update!(content: formatted) if last_message
+    assistant_messages = chat.messages.where(role: :assistant).order(:created_at)
+    last_message = assistant_messages.last
+    # Destroy all intermediate assistant messages (tool-call stubs with no text)
+    assistant_messages.where.not(id: last_message.id).each do |m|
+      m.destroy if m.content.blank?
+    end
+    last_message&.update!(content: formatted)
 
     @user_message             = input
     @assistant_message        = formatted
