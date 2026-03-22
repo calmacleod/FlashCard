@@ -268,7 +268,8 @@ code {
   position: sticky;
   top: 0;
   height: 100vh;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   transition: width 160ms ease, padding 160ms ease, border-color 160ms ease;
 }
 
@@ -301,12 +302,18 @@ html[data-sidebar="open"] .app-main-topbar {
   padding: 8px 6px 14px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 14px;
+  min-width: 0;
 }
 
 .sidebar-section {
   padding: 10px 6px;
   display: grid;
   gap: 10px;
+  min-width: 0;
+}
+
+.sidebar-section form {
+  min-width: 0;
 }
 
 .sidebar-label {
@@ -899,6 +906,7 @@ body.rule-agent-fullscreen .rule-agent {
 }
 
 .chat-history__new-btn {
+  display: flex;
   width: 100%;
   margin-bottom: 8px;
 }
