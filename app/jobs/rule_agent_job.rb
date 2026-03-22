@@ -2,43 +2,42 @@ class RuleAgentJob < ApplicationJob
   queue_as :default
 
   THINKING_BROADCAST_EVERY = 200 # characters
+  CONTENT_BROADCAST_EVERY  = 100 # characters
 
   def perform(chat_id, source_csv, base_url)
     agent = RuleAgent.find(chat_id, source_csv: source_csv, base_url: base_url)
 
-    # Broadcast final assistant message (with stored thinking_text) as soon as
-    # it is saved, before the link-formatting pass below.
-    agent.on_end_message do |msg|
-      next unless msg.role.to_s == "assistant" && msg.content.present?
-
-      ar_msg = Chat.find(chat_id).messages.where(role: :assistant).order(:created_at).last
-      next unless ar_msg
-
-      Turbo::StreamsChannel.broadcast_replace_to(
-        "rule_agent_#{chat_id}",
-        target: "thinking_#{chat_id}",
-        partial: "rule_agent/message",
-        locals: { message: ar_msg }
-      )
-    end
-
-    # Stream thinking tokens to the client as they arrive.
-    accumulated_thinking = +""
-    last_broadcast_at     = 0
+    # Stream thinking and content tokens to the client as they arrive.
+    accumulated_thinking        = +""
+    accumulated_content         = +""
+    last_thinking_broadcast_at  = 0
+    last_content_broadcast_at   = 0
 
     agent.complete do |chunk|
-      next unless chunk.thinking&.text.present?
+      if chunk.thinking&.text.present?
+        accumulated_thinking << chunk.thinking.text
 
-      accumulated_thinking << chunk.thinking.text
+        if accumulated_thinking.length - last_thinking_broadcast_at >= THINKING_BROADCAST_EVERY
+          last_thinking_broadcast_at = accumulated_thinking.length
+          Turbo::StreamsChannel.broadcast_replace_to(
+            "rule_agent_#{chat_id}",
+            target: "thinking_#{chat_id}",
+            partial: "rule_agent/thinking_stream",
+            locals: { chat_id: chat_id, thinking_text: accumulated_thinking }
+          )
+        end
+      elsif chunk.content.present?
+        accumulated_content << chunk.content
 
-      if accumulated_thinking.length - last_broadcast_at >= THINKING_BROADCAST_EVERY
-        last_broadcast_at = accumulated_thinking.length
-        Turbo::StreamsChannel.broadcast_replace_to(
-          "rule_agent_#{chat_id}",
-          target: "thinking_#{chat_id}",
-          partial: "rule_agent/thinking_stream",
-          locals: { chat_id: chat_id, thinking_text: accumulated_thinking }
-        )
+        if accumulated_content.length - last_content_broadcast_at >= CONTENT_BROADCAST_EVERY
+          last_content_broadcast_at = accumulated_content.length
+          Turbo::StreamsChannel.broadcast_replace_to(
+            "rule_agent_#{chat_id}",
+            target: "thinking_#{chat_id}",
+            partial: "rule_agent/content_stream",
+            locals: { chat_id: chat_id, thinking_text: accumulated_thinking, content_text: accumulated_content }
+          )
+        end
       end
     end
 
@@ -53,7 +52,7 @@ class RuleAgentJob < ApplicationJob
       "rule_agent_#{chat_id}",
       target: "thinking_#{chat_id}",
       partial: "rule_agent/message",
-      locals: { message: last_msg }
+      locals: { message: last_msg, chat_id: chat_id }
     )
 
     Turbo::StreamsChannel.broadcast_replace_to(

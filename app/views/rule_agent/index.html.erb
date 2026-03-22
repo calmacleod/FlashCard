@@ -42,6 +42,12 @@
     <% @messages.each do |msg| %>
       <%= render "message", message: msg %>
     <% end %>
+    <% if @processing %>
+      <div id="thinking_<%= @chat.id %>" class="message message--assistant message--thinking">
+        <div class="message__role">Agent</div>
+        <div class="message__content message__thinking"><span></span><span></span><span></span></div>
+      </div>
+    <% end %>
   </div>
 
   <%= render "token_usage", tokens: @tokens %>

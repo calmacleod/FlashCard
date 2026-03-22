@@ -1,0 +1,10 @@
+<div id="thinking_<%= chat_id %>" class="message message--assistant">
+  <div class="message__role">Agent</div>
+  <% if thinking_text.present? %>
+    <details class="message__thinking-block">
+      <summary class="message__thinking-summary">Thinking</summary>
+      <div class="message__thinking-text"><%= simple_format(thinking_text) %></div>
+    </details>
+  <% end %>
+  <div class="message__content"><%= simple_format(content_text) %></div>
+</div>

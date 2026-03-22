@@ -1,4 +1,4 @@
-<div class="message message--<%= message.role %>">
+<div <%= "id=\"thinking_#{chat_id}\"" if local_assigns[:chat_id] %> class="message message--<%= message.role %>">
   <div class="message__role"><%= message.role == "user" ? "You" : "Agent" %></div>
   <% if message.role.to_s == "assistant" && message.thinking_text.present? %>
     <details class="message__thinking-block">

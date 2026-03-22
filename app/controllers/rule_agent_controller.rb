@@ -20,6 +20,7 @@ class RuleAgentController < ApplicationController
     assistant_msgs = @chat.messages.where(role: :assistant).where.not(content: [ nil, "" ])
     @messages = user_msgs.or(assistant_msgs).order(:created_at)
     @tokens   = @chat.tokens
+    @processing = @chat.messages.order(:created_at).last&.role.to_s == "user"
 
     @past_chats = Chat.where(browser_token: browser_token)
                       .where.not(id: @chat.id)
