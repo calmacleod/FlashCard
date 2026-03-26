@@ -39,4 +39,4 @@
 /test_docs/*
 /output/*
 
-/.claude/settings.local.json
+/.claude/*
