@@ -12,10 +12,10 @@ bin/rails server
 bin/rails test
 
 # Run a single test file
-bin/rails test test/models/flash_card_test.rb
+bin/rails test test/models/rulebook_entry_test.rb
 
 # Run a single test by line number
-bin/rails test test/models/flash_card_test.rb:12
+bin/rails test test/models/rulebook_entry_test.rb:12
 
 # Database setup / migrations
 bin/rails db:create db:migrate
@@ -29,55 +29,60 @@ bundle exec rubocop
 
 ## Architecture Overview
 
-This is a Rails 8 app that turns uploaded PDFs into Anki-compatible flashcard sets using local LLMs via Ollama. The pipeline is:
+This is a Rails 8 app for processing rulebook PDFs into structured, searchable entries with an AI-powered rule agent. The pipeline is:
 
-**Upload → Chunk → Approve → Generate → (Refine) → Export CSV**
+**Upload PDF → Process → Index → Search / Chat with Agent**
 
 ### Processing Pipeline
 
-1. User uploads a PDF on `FlashCardsController#create`
-2. `FlashCardChunkingJob` runs: extracts text via `PdfTextExtractor`, then `SemanticChunker` asks the LLM to produce a structured outline with line-number boundaries, then slices the text into `FlashCardChunk` records
-3. Status moves to `awaiting_approval` — user reviews/edits chunks in the UI, then submits `approve_chunks`
-4. `FlashCardGenerationJob` runs: iterates approved chunks, sends each to `OllamaClient#generate` via `FlashCardPromptBuilder`, parses card pairs via `FlashCardCardsExtractor`, saves `FlashCard` records
-5. Optional: `FlashCardRefinementJob` re-evaluates each card against a user instruction via `FlashCardRefinementPromptBuilder` + `FlashCardDecisionParser`, marking each card `kept`/`changed`/`discarded`
-6. Completed cards export as CSV (Anki-compatible, two-column: front, back)
+1. User uploads a rulebook PDF via `RulebookController`
+2. `RulebookProcessor` extracts and structures rules from the PDF using RubyLLM (`gemini-2.5-flash`)
+3. The pipeline normalizes and assembles `RulebookEntry` and `RulebookChunk` records
+4. `RuleIndexer` indexes entries for search
+5. Users can search rules via `RuleSearchController` or chat with the `RuleAgentController`
+6. The rule agent (`RuleAgentJob`) uses tools (`RuleSearchTool`, `RuleDefinitionLookupTool`, `RuleReferenceLinkTool`) to answer questions
 
 ### Key Models
 
-- **`FlashCardRequest`** — the central record tracking a PDF job; holds status, progress, log, model choice, detail level. Statuses: `queued → chunking → awaiting_approval → processing → refining → completed / failed`
-- **`FlashCardChunk`** — a semantic slice of the PDF, with `approved` flag, `path_json` (breadcrumb array), and `content_text`
-- **`FlashCard`** — a generated card with `front`/`back` plus optional refinement fields (`refined_front`, `refined_back`, `status`: kept/changed/discarded). `effective_front`/`effective_back` return the correct value based on refinement status
-
-### Real-time Updates
-
-After every `FlashCardRequest` save, `FlashCardRequestBroadcaster` re-renders the `flash_cards/request_panel` partial and broadcasts it over Action Cable channel `flash_card_request:<id>`. The front-end Stimulus controller subscribes and swaps in the HTML.
+- **`RulebookEntry`** — a structured rule entry extracted from the PDF
+- **`RulebookChunk`** — a semantic chunk of a rulebook PDF
+- **`Chat`** — a chat conversation with the rule agent
+- **`Message`** — an individual message in a chat conversation
+- **`ToolCall`** — a tool invocation made by the agent
+- **`Model`** — LLM model selection/configuration
 
 ### LLM Integration
 
-**`OllamaClient`** — wraps Ollama's HTTP API directly (not via RubyLLM). Two main methods:
-- `#generate` — legacy `/api/generate` endpoint
-- `#chat` — `/api/chat` with optional JSON schema `format` parameter (used by `SemanticChunker` for structured outline output)
+**`OllamaClient`** — wraps Ollama's HTTP API directly. Two main methods:
+- `#generate` — `/api/generate` endpoint
+- `#chat` — `/api/chat` with optional JSON schema `format` parameter
 
-**RubyLLM** (`ruby_llm` gem) is configured in `config/initializers/ruby_llm.rb`. It connects the `:openai` provider to Ollama's OpenAI-compatible endpoint AND to Gemini (via `GEMINI_API_KEY`). The `RUBYLLM_PROVIDER` env var controls which provider is active. RubyLLM is available for new AI features but the existing pipeline uses `OllamaClient` directly.
+**RubyLLM** (`ruby_llm` gem) is configured in `config/initializers/ruby_llm.rb`. It connects the `:openai` provider to Ollama's OpenAI-compatible endpoint AND to Gemini (via `GEMINI_API_KEY`). The `RUBYLLM_PROVIDER` env var controls which provider is active. The rulebook pipeline uses RubyLLM with `gemini-2.5-flash`.
 
 ### Services (`app/services/`)
 
 | Service | Responsibility |
 |---|---|
 | `OllamaClient` | HTTP wrapper for Ollama API |
-| `SemanticChunker` | AI-driven outline → line-slice chunks |
-| `PdfTextExtractor` | PDF → text with `<<<PAGE N>>>` markers |
-| `PdfVectorizer` | Embedding generation (via Ollama) |
-| `PdfChunker` | Simpler non-AI chunking (legacy) |
-| `FlashCardPromptBuilder` | Builds generation prompts |
-| `FlashCardCardsExtractor` | Parses LLM response → card pairs |
-| `FlashCardRefinementPromptBuilder` | Builds refinement prompts |
-| `FlashCardDecisionParser` | Parses keep/change/discard decisions |
-| `FlashCardRequestBroadcaster` | Action Cable broadcast helper |
+| `RulebookProcessor` | PDF → structured rule units via RubyLLM |
+| `RulebookPipeline` | Orchestrates the full rulebook processing flow |
+| `RulebookAssembler` | Assembles processed chunks into entries |
+| `RulebookNormalizer` | Normalizes rule text |
+| `RulebookReviewer` | Reviews/validates extracted rules |
+| `RulebookFlashcardGenerator` | Generates flashcards from rulebook entries |
+| `RulebookAnkiTagger` | Tags entries for Anki export |
+| `RuleAgent` | AI agent that answers rule questions using tools |
+| `RuleSearchTool` | Tool for searching rules |
+| `RuleSearcher` | Underlying search implementation |
+| `RuleDefinitionLookupTool` | Tool for looking up rule definitions |
+| `RuleReferenceLinkTool` | Tool for resolving rule references |
+| `RuleIndexer` | Indexes rulebook entries for search |
 
 ### Background Jobs
 
 All jobs use Solid Queue. The job dashboard is at `/jobs` (MissionControl::Jobs).
+
+- **`RuleAgentJob`** — async rule agent processing
 
 ### Environment Variables
 
