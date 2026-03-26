@@ -33,7 +33,7 @@ bundle install
 bin/rails db:create db:migrate
 
 # Copy environment variables template and fill in values
-cp .env.template .env
+cp env.template .env
 ```
 
 ### Environment variables
