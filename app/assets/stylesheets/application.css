@@ -970,6 +970,11 @@ body.rule-agent-fullscreen .rule-agent {
   background: var(--surface-2);
 }
 
+.sidebar-nav__link--active {
+  background: var(--surface-2);
+  font-weight: 600;
+}
+
 /* Rulebook viewer */
 .rulebook-back {
   font-size: 14px;
