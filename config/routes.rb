@@ -9,13 +9,7 @@ Rails.application.routes.draw do
   # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
-  root "flash_cards#new"
-  resources :flash_cards, only: [:new, :create, :show] do
-    post :retry, on: :member
-    post :refine, on: :member
-    post :approve_chunks, on: :member
-    post :rechunk, on: :member
-  end
+  root "rulebook#index"
 
   get "rulebook",      to: "rulebook#index", as: :rulebook
   get "rulebook/show", to: "rulebook#show",  as: :rulebook_show
