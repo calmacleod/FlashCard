@@ -23,11 +23,14 @@
       </div>
 
       <% if @document.file.content_type == "application/pdf" %>
-        <iframe
-          src="<%= rails_blob_path(@document.file, disposition: :inline) %>"
-          style="width: 100%; height: 80vh; border: 1px solid var(--border); border-radius: var(--radius);"
-          title="<%= @document.name %>">
-        </iframe>
+        <details class="pdf-viewer">
+          <summary class="pdf-viewer__toggle">View PDF</summary>
+          <iframe
+            src="<%= rails_blob_path(@document.file, disposition: :inline) %>"
+            class="pdf-viewer__frame"
+            title="<%= @document.name %>">
+          </iframe>
+        </details>
       <% elsif @document.file.content_type == "text/plain" %>
         <pre style="white-space: pre-wrap; word-break: break-word; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; font-size: 13px; line-height: 1.6; max-height: 80vh; overflow-y: auto;"><%= @document.file.download %></pre>
       <% end %>
