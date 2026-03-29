@@ -36,10 +36,21 @@
     <% end %>
 
     <div class="actions" style="margin-top: 16px;">
+      <%= link_to "Edit Schema", edit_document_path(@document), class: "btn btn--ghost" %>
       <%= button_to "Delete Document", document_path(@document), method: :delete,
             class: "btn btn--ghost",
             style: "color: var(--danger-text);",
             data: { turbo_confirm: "Delete \"#{@document.name}\"? This cannot be undone." } %>
     </div>
   </div>
+
+  <% if @document.extraction_schema.present? %>
+    <div class="card" style="margin-top: 18px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+        <strong>Extraction Schema</strong>
+        <%= link_to "Edit", edit_document_path(@document), class: "link", style: "font-size: 13px;" %>
+      </div>
+      <pre style="margin: 0; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; font-size: 12px; line-height: 1.55; overflow: auto; max-height: 320px; font-family: var(--font-mono); white-space: pre;"><%= JSON.pretty_generate(@document.extraction_schema_hash) %></pre>
+    </div>
+  <% end %>
 </div>

@@ -1,5 +1,5 @@
 class DocumentsController < ApplicationController
-  before_action :set_document, only: [:show, :destroy]
+  before_action :set_document, only: [:show, :edit, :update, :destroy]
 
   def index
     @documents = Document.with_attached_file.order(created_at: :desc)
@@ -20,6 +20,16 @@ class DocumentsController < ApplicationController
 
   def show; end
 
+  def edit; end
+
+  def update
+    if @document.update(document_schema_params)
+      redirect_to @document, notice: "Schema updated."
+    else
+      render :edit, status: :unprocessable_entity
+    end
+  end
+
   def destroy
     @document.destroy
     redirect_to documents_path, notice: "Document deleted."
@@ -33,5 +43,9 @@ class DocumentsController < ApplicationController
 
   def document_params
     params.require(:document).permit(:name, :description, :file)
+  end
+
+  def document_schema_params
+    params.require(:document).permit(:extraction_schema)
   end
 end

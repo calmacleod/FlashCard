@@ -1,0 +1,71 @@
+<% content_for :title, "Edit Schema — #{@document.name}" %>
+
+<div class="page">
+  <div class="headline">
+    <div>
+      <h1>Extraction Schema</h1>
+      <p>Define the JSON structure the AI should extract from <strong><%= @document.name %></strong>.</p>
+    </div>
+    <%= link_to "← Back to Document", document_path(@document), class: "link" %>
+  </div>
+
+  <div class="card" data-controller="schema-builder">
+    <%= form_with model: @document, url: document_path(@document), method: :patch do |f| %>
+      <% if @document.errors.any? %>
+        <div class="alert" style="margin-bottom: 16px;">
+          <% @document.errors.full_messages.each do |msg| %>
+            <div><%= msg %></div>
+          <% end %>
+        </div>
+      <% end %>
+
+      <div class="form-grid">
+        <%# ── Property builder ── %>
+        <div>
+          <label>Properties</label>
+          <p class="hint">Each property becomes a key in the extracted JSON object. Objects and arrays can be nested arbitrarily deep.</p>
+          <%# JS populates rows from the textarea JSON on connect() %>
+          <div
+            data-schema-builder-target="rows"
+            class="schema-group"
+            style="margin-top: 12px;"
+          >
+            <div class="schema-group__footer">
+              <button type="button" class="btn btn--ghost btn--sm"
+                data-action="click->schema-builder#addProperty">+ Add Property</button>
+            </div>
+          </div>
+        </div>
+
+        <%# ── Options ── %>
+        <div>
+          <label>Options</label>
+          <div style="margin-top: 10px;">
+            <label style="font-weight: 400; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox"
+                data-schema-builder-target="additionalProperties"
+                data-action="change->schema-builder#render" />
+              Allow additional properties
+              <span class="hint" style="margin: 0;">(uncheck for strict OpenAI structured output)</span>
+            </label>
+          </div>
+        </div>
+
+        <%# ── JSON textarea — the actual submitted value ── %>
+        <div>
+          <label>JSON Schema</label>
+          <p class="hint">Updated live by the builder above. You can also edit it directly.</p>
+          <%= f.text_area :extraction_schema,
+                data: { "schema-builder-target": "output" },
+                style: "font-family: var(--font-mono); font-size: 12px; min-height: 260px; margin-top: 8px;",
+                placeholder: '{"type":"object","properties":{},"additionalProperties":false}' %>
+        </div>
+
+        <div class="actions" style="margin-top: 0;">
+          <%= f.submit "Save Schema", class: "btn" %>
+          <%= link_to "Cancel", document_path(@document), class: "btn btn--ghost" %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
