@@ -1,0 +1,45 @@
+<% content_for :title, @document.name %>
+
+<div class="page">
+  <div class="headline">
+    <div>
+      <h1><%= @document.name %></h1>
+      <% if @document.description.present? %>
+        <p><%= @document.description %></p>
+      <% end %>
+    </div>
+    <%= link_to "← Back to Documents", documents_path, class: "link" %>
+  </div>
+
+  <div class="card">
+    <% if @document.file.attached? %>
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
+        <div>
+          <span class="badge"><%= @document.file.content_type == "application/pdf" ? "PDF" : "TXT" %></span>
+          &ensp;
+          <%= link_to @document.file.filename, rails_blob_path(@document.file, disposition: :attachment), class: "link" %>
+        </div>
+        <p class="meta" style="margin: 0;">Uploaded <%= @document.created_at.strftime("%B %-d, %Y at %-I:%M %p") %></p>
+      </div>
+
+      <% if @document.file.content_type == "application/pdf" %>
+        <iframe
+          src="<%= rails_blob_path(@document.file, disposition: :inline) %>"
+          style="width: 100%; height: 80vh; border: 1px solid var(--border); border-radius: var(--radius);"
+          title="<%= @document.name %>">
+        </iframe>
+      <% elsif @document.file.content_type == "text/plain" %>
+        <pre style="white-space: pre-wrap; word-break: break-word; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; font-size: 13px; line-height: 1.6; max-height: 80vh; overflow-y: auto;"><%= @document.file.download %></pre>
+      <% end %>
+    <% else %>
+      <p class="meta">No file attached.</p>
+    <% end %>
+
+    <div class="actions" style="margin-top: 16px;">
+      <%= button_to "Delete Document", document_path(@document), method: :delete,
+            class: "btn btn--ghost",
+            style: "color: var(--danger-text);",
+            data: { turbo_confirm: "Delete \"#{@document.name}\"? This cannot be undone." } %>
+    </div>
+  </div>
+</div>

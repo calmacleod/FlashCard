@@ -1175,6 +1175,18 @@ details[open] > .rulebook-section__summary::before {
   padding: 12px 0;
 }
 
+/* Document type badge */
+.badge {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 /* Responsive polish */
 @media (max-width: 640px) {
   .page {

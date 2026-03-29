@@ -1,0 +1,46 @@
+<% content_for :title, "Documents" %>
+
+<div class="page">
+  <div class="headline">
+    <div>
+      <h1>Documents</h1>
+      <p>Uploaded PDFs and text files.</p>
+    </div>
+    <%= link_to "Upload Document", new_document_path, class: "btn" %>
+  </div>
+
+  <% if @documents.empty? %>
+    <div class="card">
+      <p class="meta">No documents uploaded yet.</p>
+    </div>
+  <% else %>
+    <div class="card-list">
+      <% @documents.each do |doc| %>
+        <div class="card">
+          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+            <div>
+              <strong><%= link_to doc.name, document_path(doc), class: "link" %></strong>
+              <% if doc.description.present? %>
+                <p class="meta" style="margin: 4px 0 0;"><%= doc.description %></p>
+              <% end %>
+              <p class="hint" style="margin-top: 6px;">
+                <% if doc.file.attached? %>
+                  <span class="badge"><%= doc.file.content_type == "application/pdf" ? "PDF" : "TXT" %></span>
+                  &ensp;
+                <% end %>
+                Uploaded <%= doc.created_at.strftime("%b %-d, %Y") %>
+              </p>
+            </div>
+            <div class="actions" style="margin-top: 0;">
+              <%= link_to "View", document_path(doc), class: "btn btn--sm btn--ghost" %>
+              <%= button_to "Delete", document_path(doc), method: :delete,
+                    class: "btn btn--sm btn--ghost",
+                    style: "color: var(--danger-text);",
+                    data: { turbo_confirm: "Delete \"#{doc.name}\"?" } %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>
