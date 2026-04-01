@@ -55,7 +55,7 @@ class RulebookPipeline
       chunk_to:    chunk_to
     )
 
-    @csv_path = Rails.root.join("#{File.basename(@pdf_path, File.extname(@pdf_path))}.csv").to_s
+    @csv_path = Rails.root.join("output", "#{File.basename(@pdf_path, File.extname(@pdf_path))}.csv").to_s
   end
 
   # ── Step 3: Normalize CSV into RulebookEntry records ───────────────────────

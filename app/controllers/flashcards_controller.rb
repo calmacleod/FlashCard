@@ -1,5 +1,9 @@
 class FlashcardsController < ApplicationController
-  before_action :set_document
+  before_action :set_document, except: [:index]
+
+  def index
+    @flashcards_by_document = Document.joins(:flashcards).includes(:flashcards).distinct
+  end
 
   def show
     @flashcards = @document.flashcards.ordered
@@ -12,7 +16,7 @@ class FlashcardsController < ApplicationController
     end
 
     FlashcardGenerationJob.perform_later(@document.id)
-    redirect_to document_flashcards_path(@document)
+    redirect_to document_path(@document)
   end
 
   private

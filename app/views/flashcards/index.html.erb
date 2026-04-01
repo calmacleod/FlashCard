@@ -1,0 +1,32 @@
+<% content_for :title, "Flashcards" %>
+
+<div class="page">
+  <div class="headline">
+    <div>
+      <h1>Flashcards</h1>
+      <% total = @flashcards_by_document.sum { |d| d.flashcards.size } %>
+      <% if total > 0 %>
+        <p class="meta"><%= total %> cards across <%= @flashcards_by_document.size %> <%= "document".pluralize(@flashcards_by_document.size) %></p>
+      <% end %>
+    </div>
+  </div>
+
+  <% if @flashcards_by_document.empty? %>
+    <div class="card" style="text-align: center; padding: 40px 24px;">
+      <p class="meta" style="margin-bottom: 16px;">No flashcards generated yet.</p>
+      <%= link_to "Go to Documents", documents_path, class: "btn" %>
+    </div>
+  <% else %>
+    <% @flashcards_by_document.each do |document| %>
+      <div class="card" style="margin-bottom: 12px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+          <div>
+            <strong><%= document.name %></strong>
+            <span class="badge" style="margin-left: 8px;"><%= document.flashcards.size %> cards</span>
+          </div>
+          <%= link_to "Study", document_flashcards_path(document), class: "btn btn--ghost" %>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+</div>

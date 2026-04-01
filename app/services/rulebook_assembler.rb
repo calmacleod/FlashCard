@@ -3,16 +3,17 @@ class RulebookAssembler
 
   LINE_WIDTH = 100
 
-  def self.assemble(pdf_path, format: :console, show_chunks: false, chunk_from: nil, chunk_to: nil)
-    new(pdf_path, format:, show_chunks:, chunk_from:, chunk_to:).run
+  def self.assemble(pdf_path, format: :console, show_chunks: false, chunk_from: nil, chunk_to: nil, output: nil)
+    new(pdf_path, format:, show_chunks:, chunk_from:, chunk_to:, output:).run
   end
 
-  def initialize(pdf_path, format: :console, show_chunks: false, chunk_from: nil, chunk_to: nil)
+  def initialize(pdf_path, format: :console, show_chunks: false, chunk_from: nil, chunk_to: nil, output: nil)
     @key         = File.expand_path(pdf_path)
     @format      = format
     @show_chunks = show_chunks
     @chunk_from  = chunk_from
     @chunk_to    = chunk_to
+    @output      = output
   end
 
   def run
@@ -215,8 +216,13 @@ class RulebookAssembler
   def write_csv(units, chunk_count)
     require "csv"
 
-    stem    = File.basename(@key, File.extname(@key))
-    outpath = Rails.root.join("#{stem}.csv")
+    outpath = if @output
+                Pathname.new(@output)
+              else
+                stem = File.basename(@key, File.extname(@key))
+                Rails.root.join("output", "#{stem}.csv")
+              end
+    FileUtils.mkdir_p(outpath.dirname)
 
     CSV.open(outpath, "w") do |csv|
       csv << %w[chunk rule_number section article text]

@@ -8,10 +8,12 @@ class FlashcardGenerationJob < ApplicationJob
 
     update_progress(stage: "extracting_text")
 
-    pdf_path = ActiveStorage::Blob.service.path_for(@document.file.blob.key)
-    stem     = File.basename(pdf_path, File.extname(pdf_path))
-    csv_path = Rails.root.join("#{stem}.csv").to_s
-    anki_csv = Rails.root.join("#{stem}_anki.csv").to_s
+    pdf_path   = ActiveStorage::Blob.service.path_for(@document.file.blob.key)
+    output_dir = Rails.root.join("output")
+    FileUtils.mkdir_p(output_dir)
+    stem     = @document.name.downcase.gsub(/[^a-z0-9]+/, "_").gsub(/\A_|_\z/, "")
+    csv_path = output_dir.join("#{stem}.csv").to_s
+    anki_csv = output_dir.join("#{stem}_anki.csv").to_s
 
     # Step 1 — Process PDF into chunks
     update_progress(stage: "processing_chunks")
@@ -38,7 +40,7 @@ class FlashcardGenerationJob < ApplicationJob
       chunks_done:       chunks_total,
       articles_extracted: articles_extracted
     )
-    RulebookAssembler.assemble(pdf_path, format: :csv)
+    RulebookAssembler.assemble(pdf_path, format: :csv, output: csv_path)
 
     # Step 3 — Normalize (direct mode — no LLM)
     update_progress(

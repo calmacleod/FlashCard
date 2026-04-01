@@ -23,6 +23,8 @@ Rails.application.routes.draw do
   post   "rule_agent/new",      to: "rule_agent#new_chat",       as: :new_rule_agent_chat
   delete "rule_agent",          to: "rule_agent#clear"
 
+  get "flashcards", to: "flashcards#index", as: :flashcards
+
   resources :documents, only: [:index, :new, :create, :show, :destroy, :edit, :update] do
     resource :flashcards, only: [:show, :create]
   end
