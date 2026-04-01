@@ -17,7 +17,7 @@ class RulebookNormalizer
   BAR_WIDTH    = 30
   CONTEXT_WORDS = 400
 
-  def self.normalize(csv_path, model: "gemini-2.5-flash", delay: 0, pdf_path: nil, direct: false)
+  def self.normalize(csv_path, model: "gpt-5.4-nano", delay: 0, pdf_path: nil, direct: false)
     new(csv_path, model:, delay:, pdf_path:, direct:).run
   end
 

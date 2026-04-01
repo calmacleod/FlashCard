@@ -25,7 +25,7 @@ class RulebookPipeline
   def step_process
     banner "STEP 1 — PROCESS PDF INTO CHUNKS"
 
-    model = prompt_with_default("Processor model", "gemini-3-flash-preview")
+    model = prompt_with_default("Processor model", "gpt-5.4-nano")
     delay = prompt_with_default("Delay between chunks (seconds)", "0").to_f
 
     puts
@@ -71,14 +71,14 @@ class RulebookPipeline
       model = nil
       delay = 0.0
     else
-      model = prompt_with_default("Normalizer model", "gemini-2.5-flash")
+      model = prompt_with_default("Normalizer model", "gpt-5.4-nano")
       delay = prompt_with_default("Delay between groups (seconds)", "0").to_f
     end
 
     puts
     RulebookNormalizer.normalize(
       @csv_path,
-      model:    model || "gemini-2.5-flash",
+      model:    model || "gpt-5.4-nano",
       delay:    delay,
       pdf_path: @pdf_path,
       direct:   direct

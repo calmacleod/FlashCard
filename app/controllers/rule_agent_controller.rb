@@ -34,7 +34,7 @@ class RuleAgentController < ApplicationController
     return head :bad_request if input.blank?
 
     chat = find_or_create_chat
-    model_name = params[:model].presence || "gemini-2.5-flash-lite"
+    model_name = params[:model].presence || "gpt-5.4-nano"
     chat.with_model(model_name) if chat.model_id != model_name
     chat.update!(source_csv: source)
 
@@ -93,7 +93,7 @@ class RuleAgentController < ApplicationController
   def find_or_create_chat
     token = cookies[SESSION_COOKIE].presence || SecureRandom.hex(16)
     set_session_cookie(token) unless cookies[SESSION_COOKIE]
-    model_name = params[:model].presence || "gemini-2.5-flash-lite"
+    model_name = params[:model].presence || "gpt-5.4-nano"
     Chat.find_or_create_by!(session_token: token) do |c|
       c.model         = Model.find_by(model_id: model_name)
       c.browser_token = browser_token

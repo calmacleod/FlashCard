@@ -22,8 +22,8 @@ class RulebookProcessor
     end
   end
 
-  def self.process(pdf_path, model: "gemini-3-flash-preview", delay: 0, max_tokens: nil)
-    new(pdf_path, model:, delay:, max_tokens:).run
+  def self.process(pdf_path, model: "gemini-3-flash-preview", delay: 0, max_tokens: nil, headless: false, on_chunk_done: nil)
+    new(pdf_path, model:, delay:, max_tokens:, headless:, on_chunk_done:).run
   end
 
   def self.preview_text(pdf_path, show_chunks: false)
@@ -80,11 +80,13 @@ class RulebookProcessor
     end
   end
 
-  def initialize(pdf_path, model:, delay: 0, max_tokens: nil)
-    @pdf_path   = pdf_path
-    @model      = model
-    @delay      = delay.to_f
-    @max_words  = max_tokens ? (max_tokens / TOKENS_PER_WORD).ceil : nil
+  def initialize(pdf_path, model:, delay: 0, max_tokens: nil, headless: false, on_chunk_done: nil)
+    @pdf_path       = pdf_path
+    @model          = model
+    @delay          = delay.to_f
+    @max_words      = max_tokens ? (max_tokens / TOKENS_PER_WORD).ceil : nil
+    @headless       = headless
+    @on_chunk_done  = on_chunk_done
   end
 
   def run
@@ -96,13 +98,15 @@ class RulebookProcessor
     done    = records.count(&:completed?)
     puts "#{records.size} chunks (#{done} already done)\n\n"
 
-    preview_chunks(records)
-    case confirm_proceed?
-    when :abort  then return
-    when :clear
-      RulebookChunk.for_pdf(File.expand_path(@pdf_path)).delete_all
-      puts "Chunks cleared."
-      return
+    unless @headless
+      preview_chunks(records)
+      case confirm_proceed?
+      when :abort  then return
+      when :clear
+        RulebookChunk.for_pdf(File.expand_path(@pdf_path)).delete_all
+        puts "Chunks cleared."
+        return
+      end
     end
 
     @start_time    = Time.now
@@ -351,11 +355,13 @@ class RulebookProcessor
       pct = (index * 100.0 / total).round
       bar = progress_bar(index, total)
       units = record.units
+      @total_units += units.size
       print "\r[#{bar}] #{pct}%  chunk #{index}/#{total}  #{units.size} units  (cached)  "
       $stdout.flush
       puts
       print_units(units)
       puts
+      @on_chunk_done&.call(index, total, @total_units)
       return
     end
 
@@ -383,6 +389,8 @@ class RulebookProcessor
 
     print_units(units)
     puts
+
+    @on_chunk_done&.call(index, total, @total_units)
 
     sleep(@delay) if @delay > 0 && index < total
   rescue => _e

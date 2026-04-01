@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_29_181330) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_01_123701) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -57,7 +57,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_29_181330) do
     t.text "description"
     t.text "extraction_schema"
     t.string "name", null: false
+    t.text "processing_error"
+    t.text "processing_progress"
+    t.string "processing_status"
     t.datetime "updated_at", null: false
+  end
+
+  create_table "flashcards", force: :cascade do |t|
+    t.text "back", null: false
+    t.datetime "created_at", null: false
+    t.integer "document_id", null: false
+    t.text "front", null: false
+    t.integer "position", default: 0, null: false
+    t.text "reference"
+    t.datetime "updated_at", null: false
+    t.index ["document_id", "position"], name: "index_flashcards_on_document_id_and_position"
+    t.index ["document_id"], name: "index_flashcards_on_document_id"
   end
 
   create_table "messages", force: :cascade do |t|
@@ -144,6 +159,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_29_181330) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "chats", "models"
+  add_foreign_key "flashcards", "documents"
   add_foreign_key "messages", "chats"
   add_foreign_key "messages", "models"
   add_foreign_key "messages", "tool_calls"

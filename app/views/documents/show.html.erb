@@ -47,6 +47,34 @@
     </div>
   </div>
 
+  <%= turbo_stream_from "document_#{@document.id}_status" %>
+
+  <div class="card" style="margin-top: 18px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+      <div>
+        <strong>Flashcards</strong>
+        <% count = @document.flashcards.count %>
+        <% if count > 0 %>
+          <span class="badge" style="margin-left: 8px;"><%= count %> cards</span>
+        <% end %>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <% if @document.flashcards.any? %>
+          <%= link_to "View Flashcards", document_flashcards_path(@document), class: "btn" %>
+        <% end %>
+        <%= button_to @document.flashcards.any? ? "Regenerate" : "Generate Flashcards",
+              document_flashcards_path(@document),
+              method: :post,
+              class: "btn btn--ghost",
+              disabled: @document.processing_status == "processing",
+              data: { turbo_confirm: @document.flashcards.any? ? "Regenerate flashcards? Existing cards will be replaced." : nil } %>
+      </div>
+    </div>
+    <div style="margin-top: 12px;">
+      <%= render "documents/flashcard_status", document: @document %>
+    </div>
+  </div>
+
   <% if @document.extraction_schema.present? %>
     <div class="card" style="margin-top: 18px;">
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">

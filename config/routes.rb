@@ -23,7 +23,9 @@ Rails.application.routes.draw do
   post   "rule_agent/new",      to: "rule_agent#new_chat",       as: :new_rule_agent_chat
   delete "rule_agent",          to: "rule_agent#clear"
 
-  resources :documents, only: [:index, :new, :create, :show, :destroy, :edit, :update]
+  resources :documents, only: [:index, :new, :create, :show, :destroy, :edit, :update] do
+    resource :flashcards, only: [:show, :create]
+  end
 
   mount MissionControl::Jobs::Engine, at: "/jobs"
 

@@ -23,15 +23,16 @@ class RulebookFlashcardGenerator
 
   BAR_WIDTH = 30
 
-  def self.generate(csv_path, model: "gemini-3-flash-preview", output: nil, delay: 0)
-    new(csv_path, model:, output:, delay:).run
+  def self.generate(csv_path, model: "gpt-5.4-nano", output: nil, delay: 0, on_group_done: nil)
+    new(csv_path, model:, output:, delay:, on_group_done:).run
   end
 
-  def initialize(csv_path, model:, output: nil, delay: 0)
-    @csv_path = File.expand_path(csv_path)
-    @model    = model
-    @output   = output ? File.expand_path(output) : default_output_path
-    @delay    = delay.to_f
+  def initialize(csv_path, model:, output: nil, delay: 0, on_group_done: nil)
+    @csv_path      = File.expand_path(csv_path)
+    @model         = model
+    @output        = output ? File.expand_path(output) : default_output_path
+    @delay         = delay.to_f
+    @on_group_done = on_group_done
   end
 
   def run
@@ -101,6 +102,8 @@ class RulebookFlashcardGenerator
     print "\r[#{bar}] #{pct}%  group #{index}/#{total}  #{label}  #{cards.size} cards  #{chunk_time.round(1)}s  "
     $stdout.flush
     puts
+
+    @on_group_done&.call(index, total, @all_cards.size)
   rescue => e
     warn "\n  [ERROR] group #{index} (#{label}): #{e.message}"
   end
@@ -174,7 +177,7 @@ class RulebookFlashcardGenerator
          - Definitions of terms used in the rule
       4. Do NOT produce trivially obvious or duplicate questions.
       5. Do NOT invent information — only use what appears in the source text.
-      6. Aim for 2–6 cards per article. Fewer is better if the text is sparse.
+      6. Aim for 1–3 cards per article. Fewer is better if the text is sparse.
 
       Return a JSON object with a "cards" array.
     PROMPT

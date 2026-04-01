@@ -1,10 +1,20 @@
 class Document < ApplicationRecord
   has_one_attached :file
+  has_many :flashcards, dependent: :destroy
+
+  PROCESSING_STATUSES = %w[processing completed failed].freeze
 
   ALLOWED_CONTENT_TYPES = %w[application/pdf text/plain].freeze
 
   validates :name, presence: true
   validate :valid_extraction_schema_json
+
+  def progress
+    return {} if processing_progress.blank?
+    JSON.parse(processing_progress)
+  rescue JSON::ParserError
+    {}
+  end
 
   def extraction_schema_hash
     return nil if extraction_schema.blank?

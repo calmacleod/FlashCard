@@ -1,6 +1,6 @@
 class RuleAgent < RubyLLM::Agent
   chat_model Chat
-  model "gemini-2.5-flash-lite"
+  model "gpt-5.4-nano"
   inputs :source_csv, :base_url
   temperature 0.5
   thinking budget: 8000
@@ -42,7 +42,7 @@ class RuleAgent < RubyLLM::Agent
   end
 
   # CLI entry point: creates a transient agent and runs an interactive REPL loop.
-  def self.run(source_csv:, model: "gemini-2.5-flash-lite", debug: false)
+  def self.run(source_csv:, model: "gpt-5.4-nano", debug: false)
     RubyLLM.configure { |c| c.logger = Logger.new(IO::NULL) } unless debug
 
     source_csv = File.expand_path(source_csv)

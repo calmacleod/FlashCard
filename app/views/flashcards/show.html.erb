@@ -1,0 +1,97 @@
+<% content_for :title, "Flashcards — #{@document.name}" %>
+
+<div class="page">
+  <div class="headline">
+    <div>
+      <h1>Flashcards</h1>
+      <p class="meta"><%= @document.name %> &middot; <%= @flashcards.size %> cards</p>
+    </div>
+    <%= link_to "← Back to Document", document_path(@document), class: "link" %>
+  </div>
+
+  <% if @document.processing_status == "processing" %>
+    <%= turbo_stream_from "document_#{@document.id}_status" %>
+    <div class="card" style="padding: 24px;">
+      <%= render "documents/flashcard_status", document: @document %>
+    </div>
+
+  <% elsif @flashcards.empty? %>
+    <div class="card" style="text-align: center; padding: 40px 24px;">
+      <p class="meta" style="margin-bottom: 16px;">No flashcards generated yet.</p>
+      <%= button_to "Generate Flashcards", document_flashcards_path(@document),
+            method: :post, class: "btn" %>
+    </div>
+
+  <% else %>
+    <%# ── Study mode ── %>
+    <div
+      class="fc-study"
+      data-controller="flashcards"
+      data-flashcards-total-value="<%= @flashcards.size %>">
+
+      <div class="fc-study__progress">
+        <span data-flashcards-target="counter">1</span> / <%= @flashcards.size %>
+      </div>
+
+      <div class="fc-deck">
+        <% @flashcards.each_with_index do |card, i| %>
+          <div
+            class="fc-card <%= i == 0 ? "fc-card--active" : "" %>"
+            data-flashcards-target="card"
+            data-index="<%= i %>">
+            <div class="fc-card__inner" data-action="click->flashcards#flip">
+              <div class="fc-card__face fc-card__face--front">
+                <div class="fc-card__body">
+                  <p class="fc-card__question"><%= card.front %></p>
+                  <% if card.reference.present? %>
+                    <p class="fc-card__ref"><%= card.reference %></p>
+                  <% end %>
+                </div>
+                <span class="fc-card__hint">Click to reveal answer</span>
+              </div>
+              <div class="fc-card__face fc-card__face--back">
+                <div class="fc-card__body">
+                  <p class="fc-card__answer"><%= card.back %></p>
+                  <% if card.reference.present? %>
+                    <p class="fc-card__ref"><%= card.reference %></p>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="fc-study__controls">
+        <button class="btn btn--ghost" data-action="flashcards#prev">← Prev</button>
+        <div class="fc-study__dots" data-flashcards-target="dots">
+          <% @flashcards.each_with_index do |_, i| %>
+            <span class="fc-dot <%= i == 0 ? "fc-dot--active" : "" %>" data-index="<%= i %>"></span>
+          <% end %>
+        </div>
+        <button class="btn" data-action="flashcards#next">Next →</button>
+      </div>
+    </div>
+
+    <%# ── Full list ── %>
+    <details class="card" style="margin-top: 24px;">
+      <summary style="cursor: pointer; font-weight: 600; padding: 4px 0; user-select: none;">
+        All Cards (<%= @flashcards.size %>)
+      </summary>
+      <div class="fc-list" style="margin-top: 16px;">
+        <% @flashcards.each_with_index do |card, i| %>
+          <div class="fc-list-item">
+            <div class="fc-list-item__num"><%= i + 1 %></div>
+            <div class="fc-list-item__content">
+              <p class="fc-list-item__q"><%= card.front %></p>
+              <p class="fc-list-item__a"><%= card.back %></p>
+              <% if card.reference.present? %>
+                <p class="fc-card__ref"><%= card.reference %></p>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </details>
+  <% end %>
+</div>
