@@ -43,4 +43,4 @@ group :test do
   gem "selenium-webdriver"
 end
 
-gem "kreuzberg", "~> 4.6"
+gem "kreuzberg", "~> 4.7"
