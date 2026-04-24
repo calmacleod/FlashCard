@@ -69,6 +69,7 @@
         <%= select_tag :source_csv, options_for_select(@sources.map { |s| [File.basename(s), s] }, @source),
               class: "rule-agent__source-select" %>
         <%= select_tag :model, options_for_select([
+              ["gpt-5.4", "gpt-5.4"],
               ["gpt-5.4-nano", "gpt-5.4-nano"],
               ["gemini-2.5-flash-lite", "gemini-2.5-flash-lite"],
               ["gpt-5.2", "gpt-5.2"],
