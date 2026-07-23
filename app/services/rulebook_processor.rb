@@ -401,7 +401,7 @@ class RulebookProcessor
   def extract_units(chunk_text)
     chat     = RubyLLM.chat(model: @model)
     response = chat
-                 .with_thinking(effort: "minimal")
+                 .with_thinking(effort: "low")
                  .with_temperature(0.1)
                  .with_schema(UnitSchema)
                  .ask(prompt_for(chunk_text))
