@@ -27,10 +27,20 @@ class DocumentSchemaGenerator
 
   def prompt
     <<~PROMPT
-      Create a practical JSON Schema for extracting reusable structured records from this document.
-      Return a root object with descriptive snake_case property names. Prefer an array of record objects
-      when the source contains repeated entries. Include descriptions, mark reliably present fields as
-      required, and set additionalProperties to false on every object. Do not include Markdown.
+      Create a concise JSON Schema that preserves this document as something a person can read from
+      beginning to end. Model the document, not every possible semantic detail.
+
+      Design constraints:
+      - Use a root object with no more than 6 properties.
+      - Prefer one primary array of section or record objects in source order.
+      - Give each repeated record a heading/title field and one complete body/text field rather than
+        splitting prose into deeply nested clauses, penalties, tables, and subclauses.
+      - Keep nesting to root -> record -> simple scalar arrays. Do not create nested arrays of objects
+        unless the document cannot be represented accurately without one.
+      - Limit repeated record objects to about 8 useful properties. Preserve source wording in the body.
+      - Include source page/reference fields only when useful for checking the extraction.
+      - Use descriptive snake_case names and short descriptions. Mark only reliably present fields as required.
+      - Set additionalProperties to false on every object. Do not include Markdown.
 
       Document name: #{@document.name}
       Description: #{@document.description.presence || "Not provided"}

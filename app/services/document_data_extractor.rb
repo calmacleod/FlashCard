@@ -1,5 +1,6 @@
 class DocumentDataExtractor
   MAX_CHUNK_CHARACTERS = 20_000
+  MAX_CONCURRENCY = 4
 
   def self.extract(document, schema:, model_key:, thinking: {}, on_progress: nil)
     new(document, schema:, model_key:, thinking:, on_progress:).extract
@@ -18,16 +19,48 @@ class DocumentDataExtractor
     raise ArgumentError, "The document contains no extractable text" if chunks.empty?
 
     @on_progress&.call(0, chunks.length)
-    results = chunks.each_with_index.map do |source, index|
-      result = extract_chunk(source, index:, total: chunks.length)
-      @on_progress&.call(index + 1, chunks.length)
-      result
-    end
+    results = extract_chunks(chunks)
 
     ExtractionResultMerger.merge(results, schema: @schema)
   end
 
   private
+
+  def extract_chunks(chunks)
+    jobs = Queue.new
+    outcomes = Queue.new
+    chunks.each_with_index { |source, index| jobs << [ source, index ] }
+    worker_count = [ chunks.length, MAX_CONCURRENCY ].min
+    worker_count.times { jobs << nil }
+
+    workers = Array.new(worker_count) do
+      Thread.new do
+        while (job = jobs.pop)
+          source, index = job
+          begin
+            outcomes << [ index, extract_chunk(source, index:, total: chunks.length), nil ]
+          rescue => error
+            outcomes << [ index, nil, error ]
+          end
+        end
+      end.tap { |worker| worker.report_on_exception = false }
+    end
+
+    results = Array.new(chunks.length)
+    first_error = nil
+    chunks.length.times do |completed|
+      index, result, error = outcomes.pop
+      results[index] = result
+      first_error ||= error
+      @on_progress&.call(completed + 1, chunks.length)
+    end
+    workers.each(&:join)
+    raise first_error if first_error
+
+    results
+  ensure
+    workers&.each { |worker| worker.kill if worker.alive? }
+  end
 
   def extract_chunk(source, index:, total:)
     chat = RubyLLM.chat(model: @entry.model_id, provider: @entry.provider.to_sym)

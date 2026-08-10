@@ -17,6 +17,6 @@
     <p class="meta" style="margin-top: 0;">
       Extracted <%= time_ago_in_words(extraction.updated_at) %> ago using <%= extraction.model_key %>.
     </p>
-    <pre class="code-block"><%= JSON.pretty_generate(extraction.result) %></pre>
+    <%= link_to "View extracted data", document_extraction_path(extraction.document, extraction), class: "btn" %>
   <% end %>
 </div>

@@ -29,6 +29,19 @@ class LlmModelCatalogTest < ActiveSupport::TestCase
     assert_empty LlmModelCatalog.thinking_params("gemini:gemini-2.5-test", budget: "999999")
   end
 
+  test "persists editable workflow defaults" do
+    LlmModelCatalog.update_defaults!(
+      agent: "openai:gpt-5.6-test",
+      schema: "openai:gpt-5.6-test",
+      extraction: "openai:gpt-5.6-test",
+      flashcards: "openai:gpt-5.6-test"
+    )
+
+    assert_equal "openai:gpt-5.6-test", LlmModelCatalog.default(:extraction)
+    assert_equal "openai:gpt-5.6-test",
+      ApplicationSetting.value_for("workflow_defaults").fetch("flashcards")
+  end
+
 
   test "hides local, stale, and unrelated model families" do
     Model.create!(

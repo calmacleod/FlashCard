@@ -100,5 +100,29 @@
       <p class="meta">Run extraction to turn this document into structured data using the schema above.</p>
     <% end %>
   </div>
+
+  <div class="card">
+    <div class="section-heading" style="margin-bottom: 12px;">
+      <div>
+        <strong>Flashcards</strong>
+        <% if @document.flashcards.any? %>
+          <span class="badge" style="margin-left: 8px;"><%= @document.flashcards.count %> cards</span>
+        <% end %>
+      </div>
+      <% if @document.flashcards.any? %>
+        <%= link_to "Study cards", document_flashcards_path(@document), class: "btn btn--sm btn--ghost" %>
+      <% end %>
+    </div>
+    <p class="meta">Choose how the model should turn the latest completed extraction into study questions.</p>
+    <%= render "documents/flashcard_generation_form",
+          document: @document,
+          disabled: @document.latest_completed_extraction.nil? || @document.processing_status == "processing" %>
+    <% unless @document.latest_completed_extraction %>
+      <p class="hint">Complete data extraction before generating flashcards.</p>
+    <% end %>
+    <div style="margin-top: 12px;">
+      <%= render "documents/flashcard_status", document: @document %>
+    </div>
+  </div>
   </div>
 </div>

@@ -25,4 +25,12 @@ class DocumentTest < ActiveSupport::TestCase
     assert_not document.valid?
     assert_includes document.errors[:extraction_schema], "must define a JSON Schema object with properties"
   end
+
+  test "requires a known flashcard persona" do
+    document = Document.new(name: "Rules", flashcard_persona: "unknown")
+    document.file.attach(io: StringIO.new("Rules"), filename: "rules.txt", content_type: "text/plain")
+
+    assert_not document.valid?
+    assert document.errors[:flashcard_persona].present?
+  end
 end

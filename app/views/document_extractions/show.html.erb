@@ -1,0 +1,41 @@
+<% content_for :title, "Extracted Data — #{@document.name}" %>
+
+<div class="page extraction-page">
+  <div class="headline">
+    <div>
+      <h1>Extracted Data</h1>
+      <p><%= @document.name %></p>
+    </div>
+    <%= link_to "← Back to Document", document_path(@document), class: "link" %>
+  </div>
+
+  <div class="card">
+    <div class="section-heading">
+      <div>
+        <strong><%= @extraction.schema_snapshot["title"].presence || "Schema-guided extraction" %></strong>
+        <p class="meta extraction-meta">
+          Extracted <%= time_ago_in_words(@extraction.updated_at) %> ago using <%= @extraction.model_key %>
+        </p>
+      </div>
+      <div class="actions" style="margin-top: 0;">
+        <%= link_to "Download JSON", download_document_extraction_path(@document, @extraction, format: :json), class: "btn btn--sm btn--ghost" %>
+        <%= link_to "Download CSV", download_document_extraction_path(@document, @extraction, format: :csv), class: "btn btn--sm btn--ghost" %>
+      </div>
+    </div>
+  </div>
+
+  <article class="card extraction-viewer">
+    <%= extraction_markdown(@extraction_markdown) %>
+  </article>
+
+  <details class="card extraction-source">
+    <summary class="card-summary">
+      <span>Raw extraction and schema</span>
+      <span class="summary-hint">Show</span>
+    </summary>
+    <h2>Raw JSON</h2>
+    <pre class="code-block"><%= JSON.pretty_generate(@extraction.result) %></pre>
+    <h2>Schema used for this run</h2>
+    <pre class="code-block"><%= JSON.pretty_generate(@extraction.schema_snapshot) %></pre>
+  </details>
+</div>

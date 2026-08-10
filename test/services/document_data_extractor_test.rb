@@ -80,4 +80,39 @@ class DocumentDataExtractorTest < ActiveSupport::TestCase
       RubyLLM.define_singleton_method(:chat, original_chat)
     end
   end
+
+  test "extracts multiple chunks in parallel while preserving result order" do
+    long_text = [ "Ada " * 3_000, "Grace " * 3_000, "Linus " * 3_000 ].join("\n\n")
+    @document.file.purge
+    @document.file.attach(
+      io: StringIO.new(long_text), filename: "large-roster.txt", content_type: "text/plain"
+    )
+    thread_ids = []
+    lock = Mutex.new
+    original_chat = RubyLLM.method(:chat)
+    RubyLLM.define_singleton_method(:chat) do |**_args|
+      Class.new do
+        define_method(:with_schema) { |_schema| self }
+        define_method(:ask) do |_prompt|
+          lock.synchronize { thread_ids << Thread.current.object_id }
+          sleep 0.05
+          FakeResponse.new({ "players" => [] })
+        end
+      end.new
+    end
+
+    begin
+      progress = []
+      DocumentDataExtractor.extract(
+        @document, schema: @schema, model_key: "openai:gpt-extraction-test",
+        on_progress: ->(done, total) { progress << [ done, total ] }
+      )
+
+      assert_operator thread_ids.uniq.length, :>, 1
+      assert_equal [ 0, 3 ], progress.first
+      assert_equal [ 3, 3 ], progress.last
+    ensure
+      RubyLLM.define_singleton_method(:chat, original_chat)
+    end
+  end
 end

@@ -1,0 +1,11 @@
+<%= form_with url: document_flashcards_path(document), method: :post, class: "flashcard-generator" do %>
+  <label>
+    Study persona
+    <%= select_tag :persona,
+          options_for_select(FlashcardPersona.all.map { |persona| [ persona.option_label, persona.key ] }, document.flashcard_persona),
+          disabled: disabled %>
+  </label>
+  <%= submit_tag document.flashcards.any? ? "Regenerate flashcards" : "Generate flashcards",
+        class: "btn", disabled: disabled,
+        data: { turbo_submits_with: "Starting…" } %>
+<% end %>

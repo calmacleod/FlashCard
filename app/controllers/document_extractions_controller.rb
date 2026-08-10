@@ -1,6 +1,6 @@
 class DocumentExtractionsController < ApplicationController
   before_action :set_document
-  before_action :set_extraction, only: :download
+  before_action :set_extraction, only: %i[show download]
 
   def create
     schema = @document.extraction_schema_hash
@@ -20,6 +20,14 @@ class DocumentExtractionsController < ApplicationController
     DocumentExtractionJob.perform_later(extraction.id)
 
     redirect_to @document, notice: "Document extraction started."
+  end
+
+  def show
+    return redirect_to(@document, alert: "Extraction has not completed.") unless @extraction.completed?
+
+    @extraction_markdown = ExtractionMarkdownRenderer.render(
+      @extraction.result, schema: @extraction.schema_snapshot
+    )
   end
 
   def download

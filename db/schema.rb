@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_10_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_10_030000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -37,6 +37,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_010000) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "application_settings", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "key", null: false
+    t.datetime "updated_at", null: false
+    t.json "value", default: {}, null: false
+    t.index ["key"], name: "index_application_settings_on_key", unique: true
   end
 
   create_table "chats", force: :cascade do |t|
@@ -71,6 +79,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_010000) do
     t.datetime "created_at", null: false
     t.text "description"
     t.text "extraction_schema"
+    t.string "flashcard_persona", default: "generalist", null: false
     t.json "llm_settings", default: {}, null: false
     t.string "name", null: false
     t.text "processing_error"

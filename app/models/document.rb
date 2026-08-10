@@ -9,6 +9,7 @@ class Document < ApplicationRecord
   ALLOWED_CONTENT_TYPES = %w[application/pdf text/plain].freeze
 
   validates :name, presence: true
+  validates :flashcard_persona, inclusion: { in: FlashcardPersona::PERSONAS.keys }
   validate :valid_extraction_schema_json
 
   def progress
@@ -27,6 +28,10 @@ class Document < ApplicationRecord
 
   def latest_extraction
     extractions.recent_first.first
+  end
+
+  def latest_completed_extraction
+    extractions.where(status: "completed").recent_first.first
   end
 
   def llm_setting(context)

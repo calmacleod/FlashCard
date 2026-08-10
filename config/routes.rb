@@ -11,7 +11,7 @@ Rails.application.routes.draw do
 
   root "rulebook#index"
 
-  resource :settings, only: :show
+  resource :settings, only: %i[show update]
 
   get "rulebook",      to: "rulebook#index", as: :rulebook
   get "rulebook/show", to: "rulebook#show",  as: :rulebook_show
@@ -31,7 +31,7 @@ Rails.application.routes.draw do
 
   resources :documents, only: [ :index, :new, :create, :show, :destroy, :edit, :update ] do
     post :generate_schema, on: :member
-    resources :extractions, controller: "document_extractions", only: :create do
+    resources :extractions, controller: "document_extractions", only: %i[create show] do
       get :download, on: :member
     end
     resource :flashcards, only: [ :show, :create ]

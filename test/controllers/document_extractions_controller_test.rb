@@ -47,4 +47,49 @@ class DocumentExtractionsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "name"
     assert_includes response.body, "Ada"
   end
+
+  test "shows completed results through the schema-aware viewer" do
+    schema = {
+      "title" => "Team roster",
+      "type" => "object",
+      "properties" => {
+        "players" => {
+          "type" => "array",
+          "items" => {
+            "type" => "object",
+            "properties" => {
+              "name" => { "type" => "string" },
+              "notes" => { "type" => "string" }
+            }
+          }
+        }
+      }
+    }
+    extraction = @document.extractions.create!(
+      status: "completed", schema_snapshot: schema,
+      result: { "players" => [ { "name" => "Ada", "notes" => "<script>alert(1)</script>" } ] },
+      model_key: "openai:gpt-controller-test"
+    )
+
+    get document_extraction_path(@document, extraction)
+
+    assert_response :success
+    assert_select "h1", "Extracted Data"
+    assert_select ".extraction-viewer h2", "Players"
+    assert_select ".extraction-viewer h3", text: /Player 1.*Ada/
+    assert_select ".extraction-viewer script", count: 0
+    assert_includes response.body, "&lt;script&gt;alert(1)&lt;/script&gt;"
+    assert_select "summary", text: /Raw extraction and schema/
+  end
+
+  test "redirects incomplete extractions away from the viewer" do
+    extraction = @document.extractions.create!(
+      schema_snapshot: @document.extraction_schema_hash,
+      model_key: "openai:gpt-controller-test"
+    )
+
+    get document_extraction_path(@document, extraction)
+
+    assert_redirected_to @document
+  end
 end

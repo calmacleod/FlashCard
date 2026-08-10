@@ -18,8 +18,9 @@
   <% elsif @flashcards.empty? %>
     <div class="card" style="text-align: center; padding: 40px 24px;">
       <p class="meta" style="margin-bottom: 16px;">No flashcards generated yet.</p>
-      <%= button_to "Generate Flashcards", document_flashcards_path(@document),
-            method: :post, class: "btn" %>
+      <%= render "documents/flashcard_generation_form",
+            document: @document,
+            disabled: @document.latest_completed_extraction.nil? || @document.processing_status == "processing" %>
     </div>
 
   <% else %>

@@ -68,16 +68,22 @@
           <p>New workflows start with these models. Existing documents keep their saved selections.</p>
         </div>
       </div>
-      <div class="settings-defaults">
-        <% { agent: "Rule Agent", schema: "Schema generation", extraction: "Rule extraction", flashcards: "Flashcards" }.each do |context, label| %>
-          <% model = @defaults.fetch(context) %>
-          <div class="settings-default">
-            <span><%= label %></span>
-            <strong><%= model&.label || "Not available" %></strong>
-          </div>
-        <% end %>
-      </div>
-      <p class="hint">Change a model or its reasoning effort directly in the Rule Agent or a document’s settings.</p>
+      <%= form_with url: settings_path, method: :patch, class: "settings-default-form" do %>
+        <div class="settings-defaults">
+          <% { agent: "Rule Agent", schema: "Schema generation", extraction: "Data extraction", flashcards: "Flashcards" }.each do |context, label| %>
+            <% models = context == :agent ? @agent_models : @structured_models %>
+            <label class="settings-default">
+              <span><%= label %></span>
+              <%= select_tag "workflow_defaults[#{context}]",
+                    options_for_select(models.map { |model| [ model.label, model.key ] }, @default_keys.fetch(context)) %>
+            </label>
+          <% end %>
+        </div>
+        <div class="actions">
+          <%= submit_tag "Save workflow defaults", class: "btn" %>
+        </div>
+      <% end %>
+      <p class="hint">These models are used when a workflow or document has not saved an explicit override.</p>
     </section>
 
     <section class="card settings-card">

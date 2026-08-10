@@ -56,8 +56,21 @@ class LlmModelCatalog
     end
 
     def default(context)
-      preferred = DEFAULTS.fetch(context.to_sym)
-      find(preferred) ? preferred : options(capability: required_capability(context)).first&.key
+      context = context.to_sym
+      configured = ApplicationSetting.value_for("workflow_defaults", default: {})
+      preferred = configured.fetch(context.to_s, DEFAULTS.fetch(context))
+      capability = required_capability(context)
+      find(preferred, capability:) ? preferred : options(capability:).first&.key
+    end
+
+    def update_defaults!(raw_defaults)
+      submitted = raw_defaults.to_h.stringify_keys
+      defaults = DEFAULTS.keys.to_h do |context|
+        key = submitted[context.to_s].presence || default(context)
+        entry = find!(key, capability: required_capability(context))
+        [ context.to_s, entry.key ]
+      end
+      ApplicationSetting.write("workflow_defaults", defaults)
     end
 
     def thinking_configuration(entry_or_key)
@@ -95,11 +108,11 @@ class LlmModelCatalog
       entries.to_h { |entry| [ entry.key, thinking_configuration(entry) ] }
     end
 
-    private
-
     def required_capability(context)
       context.to_sym == :agent ? :function_calling : :structured_output
     end
+
+    private
 
     def build_entry(model)
       Entry.new(

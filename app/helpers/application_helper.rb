@@ -11,4 +11,12 @@ module ApplicationHelper
     md = Redcarpet::Markdown.new(renderer, autolink: true, tables: true, fenced_code_blocks: true, strikethrough: true)
     md.render(text.to_s).html_safe
   end
+
+  def extraction_markdown(text)
+    renderer = ExternalLinkRenderer.new(
+      hard_wrap: true, safe_links_only: true, escape_html: true
+    )
+    md = Redcarpet::Markdown.new(renderer, autolink: true, tables: true)
+    md.render(text.to_s).html_safe
+  end
 end
