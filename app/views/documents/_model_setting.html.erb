@@ -1,6 +1,6 @@
 <% setting = document.llm_setting(context) %>
-<% configurations = LlmModelCatalog.configuration_map(models) %>
-<% thinking = LlmModelCatalog.thinking_configuration(setting.fetch("model")) %>
+<% configurations = LlmModelCatalog.configuration_map(models, tools: true) %>
+<% thinking = LlmModelCatalog.tool_thinking_configuration(setting.fetch("model")) %>
 <fieldset class="model-setting"
           data-controller="model-settings"
           data-model-settings-configurations-value="<%= configurations.to_json %>">

@@ -19,7 +19,7 @@ class RuleAgentController < ApplicationController
     @agent_models = LlmModelCatalog.options(capability: :function_calling, current: current_model)
     @selected_model = @agent_models.find { |model| model.key == current_model }&.key ||
       LlmModelCatalog.default(:agent) || @agent_models.first&.key
-    @thinking_configurations = LlmModelCatalog.configuration_map(@agent_models)
+    @thinking_configurations = LlmModelCatalog.configuration_map(@agent_models, tools: true)
 
     user_msgs      = @chat.messages.where(role: :user)
     assistant_msgs = @chat.messages.where(role: :assistant).where.not(content: [ nil, "" ])
@@ -49,7 +49,7 @@ class RuleAgentController < ApplicationController
     @user_message_record = chat.messages.where(role: :user).order(:created_at).last
 
     base_url = "#{request.scheme}://#{request.host_with_port}"
-    thinking = LlmModelCatalog.thinking_params(
+    thinking = LlmModelCatalog.tool_thinking_params(
       entry, effort: params[:thinking_effort], budget: params[:thinking_budget]
     )
     RuleAgentJob.perform_later(chat.id, source, base_url, thinking)

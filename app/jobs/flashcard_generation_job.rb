@@ -11,7 +11,7 @@ class FlashcardGenerationJob < ApplicationJob
     entry = LlmModelCatalog.find!(
       settings.fetch("model"), capability: LlmModelCatalog::DOCUMENT_WORKFLOW_CAPABILITIES
     )
-    thinking = LlmModelCatalog.thinking_params(
+    thinking = LlmModelCatalog.tool_thinking_params(
       entry, effort: settings["effort"], budget: settings["budget"]
     )
 

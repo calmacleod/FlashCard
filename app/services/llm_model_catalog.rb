@@ -107,8 +107,37 @@ class LlmModelCatalog
       end
     end
 
-    def configuration_map(entries)
-      entries.to_h { |entry| [ entry.key, thinking_configuration(entry) ] }
+    def tool_thinking_configuration(entry_or_key)
+      entry = entry_or_key.is_a?(Entry) ? entry_or_key : find(entry_or_key)
+      config = thinking_configuration(entry)
+      return config unless openai_chat_tool_reasoning_conflict?(entry)
+
+      {
+        mode: "effort",
+        efforts: [ "none" ],
+        hint: "RubyLLM uses Chat Completions for OpenAI; tool workflows require reasoning effort none."
+      }
+    end
+
+    def tool_thinking_params(entry_or_key, effort: nil, budget: nil)
+      entry = entry_or_key.is_a?(Entry) ? entry_or_key : find(entry_or_key)
+      normalize_tool_thinking(entry, thinking_params(entry, effort:, budget:))
+    end
+
+    def normalize_tool_thinking(entry_or_key, thinking)
+      entry = entry_or_key.is_a?(Entry) ? entry_or_key : find(entry_or_key)
+      params = thinking.to_h.symbolize_keys
+      return params unless openai_chat_tool_reasoning_conflict?(entry)
+      return params if params[:effort].blank? || params[:effort] == "none"
+
+      params.merge(effort: "none")
+    end
+
+    def configuration_map(entries, tools: false)
+      entries.to_h do |entry|
+        config = tools ? tool_thinking_configuration(entry) : thinking_configuration(entry)
+        [ entry.key, config ]
+      end
     end
 
     def required_capability(context)
@@ -141,6 +170,10 @@ class LlmModelCatalog
     def excluded?(model_id)
       normalized = model_id.downcase
       normalized.start_with?("bge-") || EXCLUDED_ID_PARTS.any? { |part| normalized.include?(part) }
+    end
+
+    def openai_chat_tool_reasoning_conflict?(entry)
+      entry&.provider == "openai" && entry.model_id.start_with?("gpt-5.6")
     end
   end
 end

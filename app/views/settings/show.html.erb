@@ -99,7 +99,7 @@
             <summary><%= models.first.provider_label %> <span class="badge"><%= models.size %></span></summary>
             <div class="settings-model-list">
               <% models.each do |model| %>
-                <% thinking = LlmModelCatalog.thinking_configuration(model) %>
+                <% thinking = LlmModelCatalog.tool_thinking_configuration(model) %>
                 <div class="settings-model">
                   <div>
                     <strong><%= model.name %></strong>

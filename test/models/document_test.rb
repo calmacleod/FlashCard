@@ -18,6 +18,20 @@ class DocumentTest < ActiveSupport::TestCase
     assert_equal "medium", document.llm_setting(:schema)["effort"]
   end
 
+  test "stores a compatible effort for GPT 5.6 tool workflows" do
+    Model.create!(
+      provider: "openai", model_id: "gpt-5.6-luna", name: "GPT 5.6 Luna",
+      capabilities: %w[structured_output function_calling reasoning]
+    )
+    document = Document.new(name: "Rules")
+
+    document.update_llm_settings(
+      "flashcards" => { "model" => "openai:gpt-5.6-luna", "effort" => "high" }
+    )
+
+    assert_equal "none", document.llm_setting(:flashcards)["effort"]
+  end
+
   test "requires extraction schemas to have an object root" do
     document = Document.new(name: "Rules", extraction_schema: '[{"type":"string"}]')
     document.file.attach(io: StringIO.new("Rules"), filename: "rules.txt", content_type: "text/plain")

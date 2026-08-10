@@ -25,7 +25,7 @@ export default class extends Controller {
       this.effortTarget.value = config.efforts.includes(previous) ? previous : ""
     }
 
-    this.hintTarget.textContent = {
+    this.hintTarget.textContent = config.hint || {
       effort: "This model uses named reasoning-effort levels.",
       budget: "This model uses a numeric thinking-token budget.",
       none: "RubyLLM does not advertise a compatible thinking control for this model."

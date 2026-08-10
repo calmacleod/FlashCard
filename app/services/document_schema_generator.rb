@@ -8,7 +8,7 @@ class DocumentSchemaGenerator
   def initialize(document, model_key:, effort: nil, budget: nil)
     @document = document
     @entry = LlmModelCatalog.find!(model_key, capability: LlmModelCatalog::DOCUMENT_WORKFLOW_CAPABILITIES)
-    @thinking = LlmModelCatalog.thinking_params(@entry, effort:, budget:)
+    @thinking = LlmModelCatalog.tool_thinking_params(@entry, effort:, budget:)
   end
 
   def generate

@@ -39,7 +39,7 @@ class DocumentFlashcardGeneratorTest < ActiveSupport::TestCase
 
   setup do
     Model.create!(
-      provider: "openai", model_id: "gpt-flashcard-test", name: "Flashcard Test",
+      provider: "openai", model_id: "gpt-5.6-luna", name: "Flashcard Test",
       capabilities: %w[structured_output function_calling reasoning]
     )
     document = Document.new(name: "Rules")
@@ -63,7 +63,7 @@ class DocumentFlashcardGeneratorTest < ActiveSupport::TestCase
         }
       },
       result: { "articles" => [ { "title" => "Kickoff", "body" => "Play begins on the whistle." } ] },
-      model_key: "openai:gpt-flashcard-test"
+      model_key: "openai:gpt-5.6-luna"
     )
   end
 
@@ -71,7 +71,7 @@ class DocumentFlashcardGeneratorTest < ActiveSupport::TestCase
     fake_chat = FakeChat.new
     original_chat = RubyLLM.method(:chat)
     RubyLLM.define_singleton_method(:chat) do |model:, provider:|
-      raise "wrong model" unless model == "gpt-flashcard-test" && provider == :openai
+      raise "wrong model" unless model == "gpt-5.6-luna" && provider == :openai
       fake_chat
     end
 
@@ -79,7 +79,7 @@ class DocumentFlashcardGeneratorTest < ActiveSupport::TestCase
       progress = []
       cards = DocumentFlashcardGenerator.generate(
         @extraction,
-        model_key: "openai:gpt-flashcard-test",
+        model_key: "openai:gpt-5.6-luna",
         persona_key: "football_rules",
         thinking: { effort: "high" },
         on_progress: ->(*values) { progress << values }
@@ -93,7 +93,7 @@ class DocumentFlashcardGeneratorTest < ActiveSupport::TestCase
       assert_equal 1, fake_chat.tools.size
       assert_includes fake_chat.tools.first.execute, "Play begins on the whistle"
       refute_includes fake_chat.prompt, "Play begins on the whistle."
-      assert_equal({ effort: "high" }, fake_chat.thinking)
+      assert_equal({ effort: "none" }, fake_chat.thinking)
       assert_equal [ 1, 1, 1 ], progress.last
     ensure
       RubyLLM.define_singleton_method(:chat, original_chat)

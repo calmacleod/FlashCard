@@ -36,6 +36,17 @@ class LlmModelCatalogTest < ActiveSupport::TestCase
     assert_empty LlmModelCatalog.thinking_params("gemini:gemini-2.5-test", budget: "999999")
   end
 
+  test "disables GPT 5.6 reasoning when function tools use Chat Completions" do
+    config = LlmModelCatalog.tool_thinking_configuration("openai:gpt-5.6-test")
+
+    assert_equal "effort", config[:mode]
+    assert_equal [ "none" ], config[:efforts]
+    assert_includes config[:hint], "Chat Completions"
+    assert_equal({ effort: "none" },
+      LlmModelCatalog.tool_thinking_params("openai:gpt-5.6-test", effort: "high"))
+    assert_empty LlmModelCatalog.tool_thinking_params("openai:gpt-5.6-test")
+  end
+
   test "persists editable workflow defaults" do
     LlmModelCatalog.update_defaults!(
       agent: "openai:gpt-5.6-test",

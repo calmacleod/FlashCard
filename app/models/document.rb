@@ -51,7 +51,9 @@ class Document < ApplicationRecord
       entry = LlmModelCatalog.find!(
         model_key, capability: LlmModelCatalog.required_capability(context)
       )
-      thinking = LlmModelCatalog.thinking_params(entry, effort: raw["effort"], budget: raw["budget"])
+      thinking = LlmModelCatalog.tool_thinking_params(
+        entry, effort: raw["effort"], budget: raw["budget"]
+      )
       [ context_name, { "model" => entry.key }.merge(thinking.stringify_keys) ]
     end
     self.llm_settings = llm_settings.merge(normalized)

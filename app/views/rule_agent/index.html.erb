@@ -65,7 +65,7 @@
   <div class="rule-agent__form">
     <%= form_with url: rule_agent_messages_path,
                   data: { turbo_stream: true, action: "submit->rule-agent#onSubmit turbo:submit-end->rule-agent#onSubmitEnd", rule_agent_target: "form" } do |f| %>
-      <% thinking = LlmModelCatalog.thinking_configuration(@selected_model) %>
+      <% thinking = LlmModelCatalog.tool_thinking_configuration(@selected_model) %>
       <div class="rule-agent__selects" data-controller="model-settings"
            data-model-settings-configurations-value="<%= @thinking_configurations.to_json %>">
         <%= select_tag :source_csv, options_for_select(@sources.map { |s| [File.basename(s), s] }, @source),
