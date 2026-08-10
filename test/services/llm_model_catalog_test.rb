@@ -19,6 +19,13 @@ class LlmModelCatalogTest < ActiveSupport::TestCase
     refute_includes options.map(&:key), "gemini:gemini-2.5-test"
   end
 
+  test "requires every capability for agentic document workflows" do
+    options = LlmModelCatalog.options(capability: LlmModelCatalog::DOCUMENT_WORKFLOW_CAPABILITIES)
+
+    assert_includes options.map(&:key), "openai:gpt-5.6-test"
+    refute_includes options.map(&:key), "gemini:gemini-2.5-test"
+  end
+
   test "uses provider-specific thinking conventions" do
     config = LlmModelCatalog.thinking_configuration("openai:gpt-5.6-test")
     assert_equal "effort", config[:mode]

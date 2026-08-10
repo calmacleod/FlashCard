@@ -1,6 +1,6 @@
 <% content_for :title, "Extracted Data — #{@document.name}" %>
 
-<div class="page extraction-page">
+<div class="page extraction-page" data-controller="extraction-viewer">
   <div class="headline">
     <div>
       <h1>Extracted Data</h1>
@@ -9,24 +9,86 @@
     <%= link_to "← Back to Document", document_path(@document), class: "link" %>
   </div>
 
-  <div class="card">
+  <section class="card extraction-summary">
     <div class="section-heading">
       <div>
-        <strong><%= @extraction.schema_snapshot["title"].presence || "Schema-guided extraction" %></strong>
+        <strong><%= @viewer.title %></strong>
         <p class="meta extraction-meta">
           Extracted <%= time_ago_in_words(@extraction.updated_at) %> ago using <%= @extraction.model_key %>
         </p>
       </div>
-      <div class="actions" style="margin-top: 0;">
+      <div class="actions extraction-downloads">
         <%= link_to "Download JSON", download_document_extraction_path(@document, @extraction, format: :json), class: "btn btn--sm btn--ghost" %>
         <%= link_to "Download CSV", download_document_extraction_path(@document, @extraction, format: :csv), class: "btn btn--sm btn--ghost" %>
       </div>
     </div>
-  </div>
 
-  <article class="card extraction-viewer">
-    <%= extraction_markdown(@extraction_markdown) %>
-  </article>
+    <div class="extraction-stats" aria-label="Extraction summary">
+      <div><strong><%= @viewer.records.size %></strong><span><%= @viewer.collection_label %></span></div>
+      <div><strong><%= @viewer.top_level_field_count %></strong><span>Document fields</span></div>
+      <div><strong><%= @viewer.missing_required_count %></strong><span>Missing required</span></div>
+    </div>
+  </section>
+
+  <% if @viewer.document_fields.any? %>
+    <section class="card extraction-overview">
+      <div class="section-heading">
+        <div><h2>Document overview</h2><p class="meta">Top-level values outside the main record list.</p></div>
+      </div>
+      <%= render "fields", fields: @viewer.document_fields %>
+    </section>
+  <% end %>
+
+  <% if @viewer.records.any? %>
+    <section class="extraction-record-browser">
+      <div class="extraction-toolbar">
+        <label class="extraction-search">
+          <span class="visually-hidden">Search records on this page</span>
+          <input type="search" placeholder="Search this page of <%= @viewer.collection_label.downcase %>…"
+                 data-extraction-viewer-target="query"
+                 data-action="input->extraction-viewer#filter">
+        </label>
+        <div class="actions">
+          <button type="button" class="btn btn--sm btn--ghost" data-action="extraction-viewer#expandAll">Expand all</button>
+          <button type="button" class="btn btn--sm btn--ghost" data-action="extraction-viewer#collapseAll">Collapse all</button>
+        </div>
+      </div>
+
+      <div class="extraction-records">
+        <% @records.each_with_index do |record, page_index| %>
+          <% absolute_index = (@page - 1) * ExtractionViewer::PER_PAGE + page_index %>
+          <% present, total = @viewer.record_completion(record) %>
+          <details class="card extraction-record" <%= "open" if page_index.zero? %>
+                   data-extraction-viewer-target="record"
+                   data-search-text="<%= record.to_json.downcase %>">
+            <summary>
+              <span class="extraction-record__number"><%= absolute_index + 1 %></span>
+              <span class="extraction-record__title"><%= @viewer.record_title(record, absolute_index) %></span>
+              <span class="extraction-record__coverage"><%= present %>/<%= total %> fields</span>
+            </summary>
+            <div class="extraction-record__body">
+              <%= render "fields", fields: @viewer.fields_for(record, @viewer.record_schema) %>
+            </div>
+          </details>
+        <% end %>
+        <p class="card extraction-no-results" data-extraction-viewer-target="empty" hidden>No records on this page match that search.</p>
+      </div>
+
+      <% if @viewer.total_pages > 1 %>
+        <nav class="extraction-pagination" aria-label="Extracted record pages">
+          <% if @page > 1 %>
+            <%= link_to "← Previous", document_extraction_path(@document, @extraction, page: @page - 1), class: "btn btn--sm btn--ghost" %>
+          <% end %>
+          <span>Page <%= @page %> of <%= @viewer.total_pages %></span>
+          <% if @page < @viewer.total_pages %>
+            <%= link_to "Next →", document_extraction_path(@document, @extraction, page: @page + 1), class: "btn btn--sm btn--ghost" %>
+          <% end %>
+        </nav>
+      <% end %>
+    </section>
+  <% elsif @viewer.document_fields.empty? %>
+    <div class="card extraction-no-results">No extracted values were returned.</div>
+  <% end %>
 
   <details class="card extraction-source">
     <summary class="card-summary">

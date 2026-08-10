@@ -9,7 +9,7 @@ class DocumentDataExtractor
   def initialize(document, schema:, model_key:, thinking: {}, on_progress: nil)
     @document = document
     @schema = schema.deep_stringify_keys
-    @entry = LlmModelCatalog.find!(model_key, capability: :structured_output)
+    @entry = LlmModelCatalog.find!(model_key, capability: LlmModelCatalog::DOCUMENT_WORKFLOW_CAPABILITIES)
     @thinking = thinking.symbolize_keys
     @on_progress = on_progress
   end
@@ -63,33 +63,22 @@ class DocumentDataExtractor
   end
 
   def extract_chunk(source, index:, total:)
-    chat = RubyLLM.chat(model: @entry.model_id, provider: @entry.provider.to_sym)
-    chat.with_thinking(**@thinking) if @thinking.any?
-    response = chat.with_schema(
-      name: "document_extraction",
-      schema: @schema,
-      strict: false
-    ).ask(prompt(source, index:, total:))
+    source_label = "source chunk #{index + 1} of #{total}"
+    agent = DocumentExtractionAgent.build(
+      entry: @entry,
+      thinking: @thinking,
+      document_name: @document.name,
+      source_label:,
+      extraction_schema: @schema,
+      source_tool: ReadWorkflowSourceTool.new(content: source, label: source_label.humanize)
+    )
+    response = agent.ask("Read #{source_label}, then extract it using the configured schema.")
 
     payload = response.content
     payload = JSON.parse(payload) if payload.is_a?(String)
     raise ArgumentError, "Extraction response must be a JSON object" unless payload.is_a?(Hash)
 
     payload.deep_stringify_keys
-  end
-
-  def prompt(source, index:, total:)
-    <<~PROMPT
-      Extract structured data from source chunk #{index + 1} of #{total} using the supplied JSON Schema.
-      Include only facts explicitly supported by this chunk. Do not guess or copy examples from field
-      descriptions. For fields absent from this chunk, use null, an empty string, an empty object, or an
-      empty array as permitted by the schema. Preserve source order and wording where practical.
-
-      DOCUMENT: #{@document.name}
-
-      SOURCE CHUNK:
-      #{source}
-    PROMPT
   end
 
   def chunk(text)

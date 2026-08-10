@@ -1,0 +1,36 @@
+<dl class="extraction-fields">
+  <% fields.each do |field| %>
+    <div class="extraction-field <%= "extraction-field--missing" if field.missing? %>">
+      <dt>
+        <%= field.label %>
+        <% if field.schema["description"].present? %>
+          <span class="extraction-field__hint" title="<%= field.schema["description"] %>">?</span>
+        <% end %>
+      </dt>
+      <dd>
+        <% if field.missing? %>
+          <span class="extraction-empty">Not extracted</span>
+        <% elsif field.value.is_a?(Hash) %>
+          <%= render "fields", fields: @viewer.fields_for(field.value, field.schema) %>
+        <% elsif field.value.is_a?(Array) %>
+          <% if field.value.all? { |item| item.is_a?(Hash) } %>
+            <div class="extraction-nested-list">
+              <% field.value.each_with_index do |item, index| %>
+                <details>
+                  <summary><%= field.label.singularize %> <%= index + 1 %></summary>
+                  <%= render "fields", fields: @viewer.fields_for(item, field.schema.fetch("items", {})) %>
+                </details>
+              <% end %>
+            </div>
+          <% else %>
+            <ul class="extraction-values">
+              <% field.value.each do |item| %><li><%= item %></li><% end %>
+            </ul>
+          <% end %>
+        <% else %>
+          <span class="extraction-value"><%= field.value %></span>
+        <% end %>
+      </dd>
+    </div>
+  <% end %>
+</dl>

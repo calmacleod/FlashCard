@@ -14,7 +14,9 @@ class SettingsController < ApplicationController
 
   def load_settings
     @agent_models = LlmModelCatalog.options(capability: :function_calling)
-    @structured_models = LlmModelCatalog.options(capability: :structured_output)
+    @structured_models = LlmModelCatalog.options(
+      capability: LlmModelCatalog::DOCUMENT_WORKFLOW_CAPABILITIES
+    )
     @selectable_models = (@agent_models + @structured_models).uniq(&:key)
       .sort_by { |model| [ model.provider, -(model.created_at&.to_i || 0), model.name ] }
     @models_by_provider = @selectable_models.group_by(&:provider)

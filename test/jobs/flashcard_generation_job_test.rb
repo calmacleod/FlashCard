@@ -4,7 +4,7 @@ class FlashcardGenerationJobTest < ActiveJob::TestCase
   setup do
     Model.create!(
       provider: "openai", model_id: "gpt-flashcard-job-test", name: "Flashcard Job Test",
-      capabilities: %w[structured_output]
+      capabilities: %w[structured_output function_calling]
     )
     @document = Document.new(name: "Handbook")
     @document.file.attach(io: StringIO.new("Handbook"), filename: "handbook.txt", content_type: "text/plain")

@@ -69,7 +69,9 @@ class DocumentsController < ApplicationController
 
   def load_model_options
     current = @document&.llm_setting(:schema)&.fetch("model", nil)
-    @structured_models = LlmModelCatalog.options(capability: :structured_output, current:)
+    @structured_models = LlmModelCatalog.options(
+      capability: LlmModelCatalog::DOCUMENT_WORKFLOW_CAPABILITIES, current:
+    )
   end
 
   def enqueue_schema_generation

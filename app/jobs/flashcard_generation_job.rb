@@ -8,7 +8,9 @@ class FlashcardGenerationJob < ApplicationJob
 
     persona = FlashcardPersona.find!(persona_key.presence || @document.flashcard_persona)
     settings = @document.llm_setting(:flashcards)
-    entry = LlmModelCatalog.find!(settings.fetch("model"), capability: :structured_output)
+    entry = LlmModelCatalog.find!(
+      settings.fetch("model"), capability: LlmModelCatalog::DOCUMENT_WORKFLOW_CAPABILITIES
+    )
     thinking = LlmModelCatalog.thinking_params(
       entry, effort: settings["effort"], budget: settings["budget"]
     )

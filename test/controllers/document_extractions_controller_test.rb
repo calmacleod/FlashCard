@@ -6,7 +6,7 @@ class DocumentExtractionsControllerTest < ActionDispatch::IntegrationTest
   setup do
     Model.create!(
       provider: "openai", model_id: "gpt-controller-test", name: "Controller Test",
-      capabilities: %w[structured_output]
+      capabilities: %w[structured_output function_calling]
     )
     @document = Document.new(
       name: "Roster",
@@ -75,9 +75,11 @@ class DocumentExtractionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "h1", "Extracted Data"
-    assert_select ".extraction-viewer h2", "Players"
-    assert_select ".extraction-viewer h3", text: /Player 1.*Ada/
-    assert_select ".extraction-viewer script", count: 0
+    assert_select ".extraction-stats", text: /1.*Players/
+    assert_select ".extraction-record", count: 1
+    assert_select ".extraction-record__title", "Ada"
+    assert_select "input[placeholder*='Search this page']", count: 1
+    assert_select ".extraction-record script", count: 0
     assert_includes response.body, "&lt;script&gt;alert(1)&lt;/script&gt;"
     assert_select "summary", text: /Raw extraction and schema/
   end

@@ -4,7 +4,7 @@ class DocumentTest < ActiveSupport::TestCase
   setup do
     Model.create!(
       provider: "openai", model_id: "gpt-document-test", name: "Document Test",
-      capabilities: %w[structured_output reasoning]
+      capabilities: %w[structured_output function_calling reasoning]
     )
   end
 

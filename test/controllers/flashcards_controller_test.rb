@@ -6,7 +6,7 @@ class FlashcardsControllerTest < ActionDispatch::IntegrationTest
   setup do
     Model.create!(
       provider: "openai", model_id: "gpt-flashcards-controller", name: "Flashcards Controller",
-      capabilities: %w[structured_output]
+      capabilities: %w[structured_output function_calling]
     )
     @document = Document.new(name: "Handbook")
     @document.file.attach(io: StringIO.new("Handbook"), filename: "handbook.txt", content_type: "text/plain")

@@ -4,7 +4,7 @@ class DocumentDataExtractorTest < ActiveSupport::TestCase
   FakeResponse = Data.define(:content)
 
   class FakeChat
-    attr_reader :schema, :thinking, :prompts
+    attr_reader :schema, :thinking, :prompts, :instructions, :tools
 
     def initialize(responses)
       @responses = responses
@@ -13,6 +13,16 @@ class DocumentDataExtractorTest < ActiveSupport::TestCase
 
     def with_thinking(**thinking)
       @thinking = thinking
+      self
+    end
+
+    def with_instructions(instructions)
+      @instructions = instructions
+      self
+    end
+
+    def with_tools(*tools)
+      @tools = tools
       self
     end
 
@@ -30,7 +40,7 @@ class DocumentDataExtractorTest < ActiveSupport::TestCase
   setup do
     Model.create!(
       provider: "openai", model_id: "gpt-extraction-test", name: "Extraction Test",
-      capabilities: %w[structured_output reasoning]
+      capabilities: %w[structured_output function_calling reasoning]
     )
     @document = Document.new(name: "Roster")
     @document.file.attach(
@@ -75,6 +85,9 @@ class DocumentDataExtractorTest < ActiveSupport::TestCase
       assert_equal @schema, fake_chat.schema[:schema]
       assert_equal false, fake_chat.schema[:strict]
       assert_equal({ effort: "low" }, fake_chat.thinking)
+      assert_equal 1, fake_chat.tools.size
+      assert_equal "Source chunk 1 of 1\n\nPlayer: Ada\n\nNumber: 12", fake_chat.tools.first.execute
+      refute_includes fake_chat.prompts.first, "Player: Ada"
       assert_equal [ [ 0, 1 ], [ 1, 1 ] ], progress
     ensure
       RubyLLM.define_singleton_method(:chat, original_chat)
@@ -92,6 +105,8 @@ class DocumentDataExtractorTest < ActiveSupport::TestCase
     original_chat = RubyLLM.method(:chat)
     RubyLLM.define_singleton_method(:chat) do |**_args|
       Class.new do
+        define_method(:with_instructions) { |_instructions| self }
+        define_method(:with_tools) { |*_tools| self }
         define_method(:with_schema) { |_schema| self }
         define_method(:ask) do |_prompt|
           lock.synchronize { thread_ids << Thread.current.object_id }

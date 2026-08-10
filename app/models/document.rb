@@ -48,7 +48,9 @@ class Document < ApplicationRecord
       context = context_name.to_sym
       raw = context_settings.to_h.stringify_keys
       model_key = raw["model"].presence || llm_setting(context).fetch("model")
-      entry = LlmModelCatalog.find!(model_key, capability: :structured_output)
+      entry = LlmModelCatalog.find!(
+        model_key, capability: LlmModelCatalog.required_capability(context)
+      )
       thinking = LlmModelCatalog.thinking_params(entry, effort: raw["effort"], budget: raw["budget"])
       [ context_name, { "model" => entry.key }.merge(thinking.stringify_keys) ]
     end

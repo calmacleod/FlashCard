@@ -2,16 +2,6 @@ class DocumentFlashcardGenerator
   Card = Data.define(:reference, :front, :back)
   MAX_SOURCE_CHARACTERS = 18_000
 
-  class CardSchema < RubyLLM::Schema
-    array :cards do
-      object do
-        string :reference, description: "Precise source heading, section, page, or other citation"
-        string :front, description: "A clear question"
-        string :back, description: "A concise answer supported by the source"
-      end
-    end
-  end
-
   def self.generate(extraction, model_key:, persona_key:, thinking: {}, on_progress: nil)
     new(
       extraction, model_key:, persona_key:, thinking:, on_progress:
@@ -20,7 +10,7 @@ class DocumentFlashcardGenerator
 
   def initialize(extraction, model_key:, persona_key:, thinking: {}, on_progress: nil)
     @extraction = extraction
-    @entry = LlmModelCatalog.find!(model_key, capability: :structured_output)
+    @entry = LlmModelCatalog.find!(model_key, capability: LlmModelCatalog::DOCUMENT_WORKFLOW_CAPABILITIES)
     @persona = FlashcardPersona.find!(persona_key)
     @thinking = thinking.symbolize_keys
     @on_progress = on_progress
@@ -43,9 +33,16 @@ class DocumentFlashcardGenerator
   private
 
   def generate_group(source, index:, total:)
-    chat = RubyLLM.chat(model: @entry.model_id, provider: @entry.provider.to_sym)
-    chat.with_thinking(**@thinking) if @thinking.any?
-    response = chat.with_schema(CardSchema).ask(prompt(source, index:, total:))
+    source_label = "extracted source group #{index + 1} of #{total}"
+    agent = DocumentFlashcardAgent.build(
+      entry: @entry,
+      thinking: @thinking,
+      persona_name: @persona.name,
+      persona_instructions: @persona.instructions,
+      source_label:,
+      source_tool: ReadWorkflowSourceTool.new(content: source, label: source_label.humanize)
+    )
+    response = agent.ask("Read #{source_label}, then create the best supported flashcards.")
     payload = response.content.is_a?(Hash) ? response.content : JSON.parse(response.content)
 
     Array(payload["cards"] || payload[:cards]).filter_map do |raw_card|
@@ -56,27 +53,6 @@ class DocumentFlashcardGenerator
 
       Card.new(reference: raw_card["reference"].to_s.strip, front:, back:)
     end
-  end
-
-  def prompt(source, index:, total:)
-    <<~PROMPT
-      You are creating study flashcards from extracted document data.
-
-      PERSONA: #{@persona.name}
-      #{@persona.instructions.strip}
-
-      This is source group #{index + 1} of #{total}.
-
-      RULES:
-      - Use only information present in the source below. Never invent facts or citations.
-      - Test one meaningful idea per card.
-      - Make the front a direct question and the back a complete, concise answer.
-      - Avoid duplicate, trivial, or opinion-based questions.
-      - Return a JSON object containing a cards array.
-
-      EXTRACTED SOURCE:
-      #{source}
-    PROMPT
   end
 
   def source_groups

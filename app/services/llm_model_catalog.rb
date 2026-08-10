@@ -8,6 +8,7 @@ class LlmModelCatalog
   end
 
   PROVIDERS = %w[openai gemini].freeze
+  DOCUMENT_WORKFLOW_CAPABILITIES = %i[structured_output function_calling].freeze
   EXCLUDED_ID_PARTS = %w[
     audio realtime image search transcribe transcription tts embedding reranker codex
     live omni robotics customtools
@@ -28,8 +29,9 @@ class LlmModelCatalog
 
   class << self
     def options(capability:, current: nil)
+      required_capabilities = Array(capability).map(&:to_s)
       entries = Model.where(provider: PROVIDERS).order(model_created_at: :desc, name: :asc).filter_map do |model|
-        next unless Array(model.capabilities).include?(capability.to_s)
+        next unless required_capabilities.all? { |required| Array(model.capabilities).include?(required) }
         next unless selectable?(model)
 
         build_entry(model)
@@ -46,7 +48,8 @@ class LlmModelCatalog
 
       model = Model.find_by(provider:, model_id:)
       return unless model
-      return if capability && !Array(model.capabilities).include?(capability.to_s)
+      required_capabilities = Array(capability).map(&:to_s)
+      return unless required_capabilities.all? { |required| Array(model.capabilities).include?(required) }
 
       build_entry(model)
     end
@@ -109,7 +112,7 @@ class LlmModelCatalog
     end
 
     def required_capability(context)
-      context.to_sym == :agent ? :function_calling : :structured_output
+      context.to_sym == :agent ? :function_calling : DOCUMENT_WORKFLOW_CAPABILITIES
     end
 
     private

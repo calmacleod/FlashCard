@@ -8,7 +8,9 @@ class DocumentExtractionsController < ApplicationController
     return redirect_to(@document, alert: "An extraction is already running.") if @document.extractions.active.exists?
 
     settings = @document.llm_setting(:extraction)
-    entry = LlmModelCatalog.find!(settings.fetch("model"), capability: :structured_output)
+    entry = LlmModelCatalog.find!(
+      settings.fetch("model"), capability: LlmModelCatalog::DOCUMENT_WORKFLOW_CAPABILITIES
+    )
     thinking = LlmModelCatalog.thinking_params(
       entry, effort: settings["effort"], budget: settings["budget"]
     )
@@ -25,9 +27,9 @@ class DocumentExtractionsController < ApplicationController
   def show
     return redirect_to(@document, alert: "Extraction has not completed.") unless @extraction.completed?
 
-    @extraction_markdown = ExtractionMarkdownRenderer.render(
-      @extraction.result, schema: @extraction.schema_snapshot
-    )
+    @viewer = ExtractionViewer.new(result: @extraction.result, schema: @extraction.schema_snapshot)
+    @page = @viewer.page(params[:page])
+    @records = @viewer.records_on_page(@page)
   end
 
   def download

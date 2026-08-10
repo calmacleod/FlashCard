@@ -1,54 +1,33 @@
 class DocumentSchemaGenerator
   MAX_SOURCE_CHARACTERS = 24_000
 
-  class SchemaResponse < RubyLLM::Schema
-    string :schema_json, description: "A valid JSON Schema object encoded as JSON"
-  end
-
   def self.generate(document, model_key:, effort: nil, budget: nil)
     new(document, model_key:, effort:, budget:).generate
   end
 
   def initialize(document, model_key:, effort: nil, budget: nil)
     @document = document
-    @entry = LlmModelCatalog.find!(model_key, capability: :structured_output)
+    @entry = LlmModelCatalog.find!(model_key, capability: LlmModelCatalog::DOCUMENT_WORKFLOW_CAPABILITIES)
     @thinking = LlmModelCatalog.thinking_params(@entry, effort:, budget:)
   end
 
   def generate
-    chat = RubyLLM.chat(model: @entry.model_id, provider: @entry.provider.to_sym)
-    chat.with_thinking(**@thinking) if @thinking.any?
-    response = chat.with_schema(SchemaResponse).ask(prompt)
+    agent = DocumentSchemaAgent.build(
+      entry: @entry,
+      thinking: @thinking,
+      document_name: @document.name,
+      document_description: @document.description,
+      source_tool: ReadWorkflowSourceTool.new(
+        content: source_text.first(MAX_SOURCE_CHARACTERS),
+        label: "Document source sample"
+      )
+    )
+    response = agent.ask("Read the source sample, then return the document extraction schema.")
     payload = response.content.is_a?(Hash) ? response.content : JSON.parse(response.content)
     normalize_schema(JSON.parse(payload.fetch("schema_json")))
   end
 
   private
-
-  def prompt
-    <<~PROMPT
-      Create a concise JSON Schema that preserves this document as something a person can read from
-      beginning to end. Model the document, not every possible semantic detail.
-
-      Design constraints:
-      - Use a root object with no more than 6 properties.
-      - Prefer one primary array of section or record objects in source order.
-      - Give each repeated record a heading/title field and one complete body/text field rather than
-        splitting prose into deeply nested clauses, penalties, tables, and subclauses.
-      - Keep nesting to root -> record -> simple scalar arrays. Do not create nested arrays of objects
-        unless the document cannot be represented accurately without one.
-      - Limit repeated record objects to about 8 useful properties. Preserve source wording in the body.
-      - Include source page/reference fields only when useful for checking the extraction.
-      - Use descriptive snake_case names and short descriptions. Mark only reliably present fields as required.
-      - Set additionalProperties to false on every object. Do not include Markdown.
-
-      Document name: #{@document.name}
-      Description: #{@document.description.presence || "Not provided"}
-
-      SOURCE SAMPLE:
-      #{source_text.first(MAX_SOURCE_CHARACTERS)}
-    PROMPT
-  end
 
   def source_text
     @source_text ||= DocumentTextExtractor.extract(@document)
