@@ -1,0 +1,83 @@
+require "test_helper"
+
+class DocumentDataExtractorTest < ActiveSupport::TestCase
+  FakeResponse = Data.define(:content)
+
+  class FakeChat
+    attr_reader :schema, :thinking, :prompts
+
+    def initialize(responses)
+      @responses = responses
+      @prompts = []
+    end
+
+    def with_thinking(**thinking)
+      @thinking = thinking
+      self
+    end
+
+    def with_schema(schema)
+      @schema = schema
+      self
+    end
+
+    def ask(prompt)
+      @prompts << prompt
+      FakeResponse.new(@responses.shift)
+    end
+  end
+
+  setup do
+    Model.create!(
+      provider: "openai", model_id: "gpt-extraction-test", name: "Extraction Test",
+      capabilities: %w[structured_output reasoning]
+    )
+    @document = Document.new(name: "Roster")
+    @document.file.attach(
+      io: StringIO.new("Player: Ada\n\nNumber: 12"),
+      filename: "roster.txt",
+      content_type: "text/plain"
+    )
+    @document.save!
+    @schema = {
+      "type" => "object",
+      "properties" => {
+        "players" => {
+          "type" => "array",
+          "items" => {
+            "type" => "object",
+            "properties" => { "name" => { "type" => "string" } }
+          }
+        }
+      }
+    }
+  end
+
+  test "extracts with the generated schema and selected model" do
+    fake_chat = FakeChat.new([ { "players" => [ { "name" => "Ada" } ] } ])
+    original_chat = RubyLLM.method(:chat)
+    RubyLLM.define_singleton_method(:chat) do |model:, provider:|
+      raise "wrong model" unless model == "gpt-extraction-test" && provider == :openai
+      fake_chat
+    end
+
+    begin
+      progress = []
+      result = DocumentDataExtractor.extract(
+        @document,
+        schema: @schema,
+        model_key: "openai:gpt-extraction-test",
+        thinking: { effort: "low" },
+        on_progress: ->(done, total) { progress << [ done, total ] }
+      )
+
+      assert_equal({ "players" => [ { "name" => "Ada" } ] }, result)
+      assert_equal @schema, fake_chat.schema[:schema]
+      assert_equal false, fake_chat.schema[:strict]
+      assert_equal({ effort: "low" }, fake_chat.thinking)
+      assert_equal [ [ 0, 1 ], [ 1, 1 ] ], progress
+    ensure
+      RubyLLM.define_singleton_method(:chat, original_chat)
+    end
+  end
+end

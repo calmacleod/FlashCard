@@ -51,34 +51,6 @@
   <%= turbo_stream_from "document_#{@document.id}_status" %>
 
   <div class="card">
-    <div class="section-heading">
-      <div>
-        <strong>Flashcards</strong>
-        <% count = @document.flashcards.count %>
-        <% if count > 0 %>
-          <span class="badge" style="margin-left: 8px;"><%= count %> cards</span>
-        <% end %>
-      </div>
-      <div class="actions" style="margin-top: 0;">
-        <% if @document.flashcards.any? %>
-          <%= link_to "View Flashcards", document_flashcards_path(@document), class: "btn" %>
-        <% end %>
-        <% if @document.file.content_type == "application/pdf" %>
-          <%= button_to @document.flashcards.any? ? "Regenerate" : "Generate Flashcards",
-              document_flashcards_path(@document),
-              method: :post,
-              class: "btn btn--ghost",
-              disabled: @document.processing_status == "processing",
-              data: { turbo_confirm: @document.flashcards.any? ? "Regenerate flashcards? Existing cards will be replaced." : nil } %>
-        <% end %>
-      </div>
-    </div>
-    <div style="margin-top: 12px;">
-      <%= render "documents/flashcard_status", document: @document %>
-    </div>
-  </div>
-
-  <div class="card">
       <div class="section-heading" style="margin-bottom: 12px;">
         <strong>Extraction Schema</strong>
         <div class="actions" style="margin-top: 0;">
@@ -96,6 +68,37 @@
       <% else %>
         <p class="meta">No extraction schema has been generated yet.</p>
       <% end %>
+  </div>
+
+  <div class="card">
+    <% extraction = @document.latest_extraction %>
+    <div class="section-heading" style="margin-bottom: 12px;">
+      <div>
+        <strong>Extracted Data</strong>
+        <% if extraction %>
+          <span class="badge" style="margin-left: 8px;"><%= extraction.status.titleize %></span>
+        <% end %>
+      </div>
+      <div class="actions" style="margin-top: 0;">
+        <% if extraction&.completed? %>
+          <%= link_to "Download JSON", download_document_extraction_path(@document, extraction, format: :json), class: "btn btn--sm btn--ghost" %>
+          <%= link_to "Download CSV", download_document_extraction_path(@document, extraction, format: :csv), class: "btn btn--sm btn--ghost" %>
+        <% end %>
+        <%= button_to extraction&.completed? ? "Extract again" : "Extract data",
+              document_extractions_path(@document), method: :post,
+              class: "btn btn--sm",
+              disabled: @document.extraction_schema_hash.nil? || extraction&.active?,
+              data: { turbo_confirm: extraction&.completed? ? "Run a new extraction using the current schema?" : nil } %>
+      </div>
+    </div>
+
+    <%= render "documents/extraction_status", extraction: extraction %>
+
+    <% if @document.extraction_schema_hash.nil? %>
+      <p class="meta">Generate or enter an extraction schema before extracting data.</p>
+    <% elsif extraction.nil? %>
+      <p class="meta">Run extraction to turn this document into structured data using the schema above.</p>
+    <% end %>
   </div>
   </div>
 </div>

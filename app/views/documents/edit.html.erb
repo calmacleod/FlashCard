@@ -24,8 +24,8 @@
               models: @structured_models, title: "Schema generation",
               description: "Used when proposing or regenerating this document's JSON Schema." %>
         <%= render "model_setting", document: @document, context: :extraction,
-              models: @structured_models, title: "Rule extraction",
-              description: "Used to turn document chunks into structured rule entries." %>
+              models: @structured_models, title: "Data extraction",
+              description: "Used to turn document chunks into data matching this schema." %>
         <%= render "model_setting", document: @document, context: :flashcards,
               models: @structured_models, title: "Flashcard generation",
               description: "Used to turn extracted rule entries into study cards." %>

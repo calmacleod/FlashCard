@@ -1,0 +1,22 @@
+<div id="extraction-status">
+  <% if extraction&.active? %>
+    <% done = extraction.progress["chunks_done"].to_i %>
+    <% total = extraction.progress["chunks_total"].to_i %>
+    <div class="flashcard-status flashcard-status--processing">
+      <span class="flashcard-status__spinner"></span>
+      Extracting structured data<%= total.positive? ? " — chunk #{done} of #{total}" : "…" %>
+    </div>
+    <% if total.positive? %>
+      <div class="progress" aria-label="Extraction progress">
+        <div class="progress-bar" style="width: <%= (done * 100.0 / total).round %>%"></div>
+      </div>
+    <% end %>
+  <% elsif extraction&.status == "failed" %>
+    <div class="alert">Extraction failed: <%= extraction.error.presence || "Unknown error" %></div>
+  <% elsif extraction&.completed? %>
+    <p class="meta" style="margin-top: 0;">
+      Extracted <%= time_ago_in_words(extraction.updated_at) %> ago using <%= extraction.model_key %>.
+    </p>
+    <pre class="code-block"><%= JSON.pretty_generate(extraction.result) %></pre>
+  <% end %>
+</div>

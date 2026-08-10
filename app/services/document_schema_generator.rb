@@ -41,14 +41,7 @@ class DocumentSchemaGenerator
   end
 
   def source_text
-    @source_text ||= @document.file.blob.open do |file|
-      content = if @document.file.content_type == "application/pdf"
-        Pdftotext.text(file.path)
-      else
-        File.read(file.path, encoding: "UTF-8")
-      end
-      content.encode("UTF-8", invalid: :replace, undef: :replace, replace: "")
-    end
+    @source_text ||= DocumentTextExtractor.extract(@document)
   end
 
   def normalize_schema(schema)

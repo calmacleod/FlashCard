@@ -31,6 +31,9 @@ Rails.application.routes.draw do
 
   resources :documents, only: [ :index, :new, :create, :show, :destroy, :edit, :update ] do
     post :generate_schema, on: :member
+    resources :extractions, controller: "document_extractions", only: :create do
+      get :download, on: :member
+    end
     resource :flashcards, only: [ :show, :create ]
   end
 

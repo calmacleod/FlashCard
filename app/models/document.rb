@@ -1,6 +1,7 @@
 class Document < ApplicationRecord
   has_one_attached :file
   has_many :flashcards, dependent: :destroy
+  has_many :extractions, class_name: "DocumentExtraction", dependent: :destroy
 
   PROCESSING_STATUSES = %w[processing completed failed].freeze
   LLM_CONTEXTS = %i[schema extraction flashcards].freeze
@@ -22,6 +23,10 @@ class Document < ApplicationRecord
     JSON.parse(extraction_schema)
   rescue JSON::ParserError
     nil
+  end
+
+  def latest_extraction
+    extractions.recent_first.first
   end
 
   def llm_setting(context)
@@ -51,7 +56,11 @@ class Document < ApplicationRecord
 
   def valid_extraction_schema_json
     return if extraction_schema.blank?
-    JSON.parse(extraction_schema)
+
+    schema = JSON.parse(extraction_schema)
+    unless schema.is_a?(Hash) && schema["type"] == "object" && schema["properties"].is_a?(Hash)
+      errors.add(:extraction_schema, "must define a JSON Schema object with properties")
+    end
   rescue JSON::ParserError
     errors.add(:extraction_schema, "is not valid JSON")
   end

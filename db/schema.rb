@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_10_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_10_010000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -50,6 +50,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_000000) do
     t.index ["browser_token"], name: "index_chats_on_browser_token"
     t.index ["model_id"], name: "index_chats_on_model_id"
     t.index ["session_token"], name: "index_chats_on_session_token", unique: true
+  end
+
+  create_table "document_extractions", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "document_id", null: false
+    t.text "error"
+    t.string "model_key", null: false
+    t.json "progress", default: {}, null: false
+    t.json "result"
+    t.json "schema_snapshot", null: false
+    t.string "status", default: "queued", null: false
+    t.json "thinking", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.index ["document_id", "created_at"], name: "index_document_extractions_on_document_id_and_created_at"
+    t.index ["document_id"], name: "index_document_extractions_on_document_id"
   end
 
   create_table "documents", force: :cascade do |t|
@@ -162,6 +177,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_000000) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "chats", "models"
+  add_foreign_key "document_extractions", "documents"
   add_foreign_key "flashcards", "documents"
   add_foreign_key "messages", "chats"
   add_foreign_key "messages", "models"
