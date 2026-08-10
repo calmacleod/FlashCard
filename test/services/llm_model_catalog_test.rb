@@ -3,7 +3,7 @@ require "test_helper"
 class LlmModelCatalogTest < ActiveSupport::TestCase
   setup do
     @openai = Model.create!(
-      provider: "openai", model_id: "gpt-test-reasoning", name: "GPT Test",
+      provider: "openai", model_id: "gpt-5.6-test", name: "GPT Test",
       capabilities: %w[function_calling structured_output reasoning], model_created_at: 1.day.ago
     )
     @gemini = Model.create!(
@@ -15,14 +15,39 @@ class LlmModelCatalogTest < ActiveSupport::TestCase
   test "filters models by required capability" do
     options = LlmModelCatalog.options(capability: :function_calling)
 
-    assert_includes options.map(&:key), "openai:gpt-test-reasoning"
+    assert_includes options.map(&:key), "openai:gpt-5.6-test"
     refute_includes options.map(&:key), "gemini:gemini-2.5-test"
   end
 
   test "uses provider-specific thinking conventions" do
-    assert_equal "effort", LlmModelCatalog.thinking_configuration("openai:gpt-test-reasoning")[:mode]
-    assert_equal({ effort: "high" }, LlmModelCatalog.thinking_params("openai:gpt-test-reasoning", effort: "high"))
+    config = LlmModelCatalog.thinking_configuration("openai:gpt-5.6-test")
+    assert_equal "effort", config[:mode]
+    assert_includes config[:efforts], "max"
+    refute_includes config[:efforts], "minimal"
+    assert_equal({ effort: "max" }, LlmModelCatalog.thinking_params("openai:gpt-5.6-test", effort: "max"))
     assert_equal({ budget: 2_000 }, LlmModelCatalog.thinking_params("gemini:gemini-2.5-test", budget: "2000"))
     assert_empty LlmModelCatalog.thinking_params("gemini:gemini-2.5-test", budget: "999999")
+  end
+
+
+  test "hides local, stale, and unrelated model families" do
+    Model.create!(
+      provider: "ollama", model_id: "qwen3:latest", name: "Qwen",
+      capabilities: %w[function_calling structured_output reasoning], model_created_at: Time.current
+    )
+    Model.create!(
+      provider: "openai", model_id: "gpt-5.3-old", name: "Old GPT",
+      capabilities: %w[function_calling structured_output reasoning], model_created_at: Time.current
+    )
+    Model.create!(
+      provider: "gemini", model_id: "gemma-4-test", name: "Gemma",
+      capabilities: %w[function_calling structured_output reasoning], model_created_at: Time.current
+    )
+
+    keys = LlmModelCatalog.options(capability: :structured_output).map(&:key)
+
+    refute_includes keys, "ollama:qwen3:latest"
+    refute_includes keys, "openai:gpt-5.3-old"
+    refute_includes keys, "gemini:gemma-4-test"
   end
 end

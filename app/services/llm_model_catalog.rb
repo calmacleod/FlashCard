@@ -1,40 +1,40 @@
 class LlmModelCatalog
   Entry = Data.define(:key, :model_id, :provider, :name, :capabilities, :created_at) do
-    def label = "#{name} (#{provider.titleize})"
+    PROVIDER_LABELS = { "openai" => "OpenAI", "gemini" => "Gemini" }.freeze
+
+    def provider_label = PROVIDER_LABELS.fetch(provider, provider.titleize)
+    def label = "#{name} (#{provider_label})"
     def reasoning? = capabilities.include?("reasoning")
   end
 
-  PROVIDERS = %w[openai gemini ollama].freeze
-  EXCLUDED_ID_PARTS = %w[audio realtime image search transcribe transcription tts embedding reranker codex].freeze
+  PROVIDERS = %w[openai gemini].freeze
+  EXCLUDED_ID_PARTS = %w[
+    audio realtime image search transcribe transcription tts embedding reranker codex
+    live omni robotics customtools
+  ].freeze
+  RECENT_RELEASE_CUTOFF = 1.year.ago.beginning_of_day.freeze
   EFFORTS = {
     "openai" => %w[minimal low medium high xhigh],
+    "openai_5_6" => %w[none low medium high xhigh max],
     "gemini_flash" => %w[minimal low medium high],
-    "gemini_pro" => %w[low high],
-    "anthropic" => %w[low medium high]
+    "gemini_pro" => %w[low high]
   }.freeze
   DEFAULTS = {
-    agent: "openai:gpt-5.4-nano",
-    schema: "openai:gpt-5.4-nano",
-    extraction: "gemini:gemini-3-flash-preview",
-    flashcards: "openai:gpt-5.4-nano"
+    agent: "openai:gpt-5.6-luna",
+    schema: "openai:gpt-5.6-luna",
+    extraction: "gemini:gemini-3.6-flash",
+    flashcards: "openai:gpt-5.6-luna"
   }.freeze
-  PINNED = %w[
-    gemini:gemini-2.5-flash gemini:gemini-2.5-flash-lite
-    openai:gpt-5.4-nano openai:gpt-5.4-mini
-  ].freeze
 
   class << self
     def options(capability:, current: nil)
       entries = Model.where(provider: PROVIDERS).order(model_created_at: :desc, name: :asc).filter_map do |model|
         next unless Array(model.capabilities).include?(capability.to_s)
-        next if snapshot?(model.model_id) || excluded?(model.model_id)
+        next unless selectable?(model)
 
         build_entry(model)
       end
-      entries = entries.group_by(&:provider).flat_map { |_provider, models| models.first(8) }
-      PINNED.filter_map { |key| find(key, capability:) }.each do |entry|
-        entries << entry unless entries.any? { |existing| existing.key == entry.key }
-      end
+      entries = entries.group_by(&:provider).flat_map { |_provider, models| models.first(12) }
       current_entry = find(current, capability:) if current.present?
       entries << current_entry if current_entry && entries.none? { |entry| entry.key == current_entry.key }
       entries.sort_by { |entry| [ entry.provider, -(entry.created_at&.to_i || 0), entry.name ] }
@@ -69,12 +69,9 @@ class LlmModelCatalog
       elsif entry.provider == "gemini"
         family = entry.model_id.include?("pro") ? "gemini_pro" : "gemini_flash"
         { mode: "effort", efforts: EFFORTS.fetch(family) }
-      elsif entry.provider == "anthropic" && entry.model_id.match?(/claude-(?:opus|sonnet)-4-[6-9]/)
-        { mode: "effort", efforts: EFFORTS.fetch("anthropic") }
-      elsif entry.provider == "anthropic"
-        { mode: "budget", efforts: [] }
       elsif entry.provider == "openai"
-        { mode: "effort", efforts: EFFORTS.fetch("openai") }
+        family = entry.model_id.start_with?("gpt-5.6") ? "openai_5_6" : "openai"
+        { mode: "effort", efforts: EFFORTS.fetch(family) }
       else
         { mode: "none", efforts: [] }
       end
@@ -113,6 +110,18 @@ class LlmModelCatalog
     end
 
     def snapshot?(model_id) = model_id.match?(/-\d{4}-\d{2}-\d{2}\z/)
+
+    def selectable?(model)
+      return false if model.model_created_at.blank? || model.model_created_at < RECENT_RELEASE_CUTOFF
+      return false if snapshot?(model.model_id) || excluded?(model.model_id)
+
+      case model.provider
+      when "openai" then model.model_id.match?(/\Agpt-5\.(?:4|5|6)(?:\z|-)/)
+      when "gemini" then model.model_id.match?(/\Agemini-(?:3\.|flash)/)
+      else false
+      end
+    end
+
     def excluded?(model_id)
       normalized = model_id.downcase
       normalized.start_with?("bge-") || EXCLUDED_ID_PARTS.any? { |part| normalized.include?(part) }

@@ -33,12 +33,14 @@ class Document < ApplicationRecord
   end
 
   def update_llm_settings(raw_settings)
-    normalized = LLM_CONTEXTS.to_h do |context|
-      raw = raw_settings.fetch(context.to_s, {}).to_h.stringify_keys
+    submitted = raw_settings.to_h.stringify_keys.slice(*LLM_CONTEXTS.map(&:to_s))
+    normalized = submitted.to_h do |context_name, context_settings|
+      context = context_name.to_sym
+      raw = context_settings.to_h.stringify_keys
       model_key = raw["model"].presence || llm_setting(context).fetch("model")
       entry = LlmModelCatalog.find!(model_key, capability: :structured_output)
       thinking = LlmModelCatalog.thinking_params(entry, effort: raw["effort"], budget: raw["budget"])
-      [ context.to_s, { "model" => entry.key }.merge(thinking.stringify_keys) ]
+      [ context_name, { "model" => entry.key }.merge(thinking.stringify_keys) ]
     end
     self.llm_settings = llm_settings.merge(normalized)
   end

@@ -42,10 +42,10 @@
 
   <body>
     <div class="app-shell">
-      <aside class="app-sidebar" aria-label="Settings sidebar">
+      <aside class="app-sidebar" aria-label="Application navigation">
         <div class="sidebar-header">
-          <strong>Settings</strong>
-          <button id="sidebar-toggle" type="button" class="btn btn--ghost" aria-label="Hide settings">
+          <strong>Cards</strong>
+          <button id="sidebar-toggle" type="button" class="btn btn--ghost" aria-label="Hide navigation">
             Hide
           </button>
         </div>
@@ -58,21 +58,8 @@
             <%= link_to "Rule Agent", rule_agent_path, class: "sidebar-nav__link #{"sidebar-nav__link--active" if request.path.start_with?("/rule_agent")}" %>
             <%= link_to "Documents", documents_path, class: "sidebar-nav__link #{"sidebar-nav__link--active" if request.path.start_with?("/documents") && !request.path.include?("/flashcards")}" %>
             <%= link_to "Flashcards", flashcards_path, class: "sidebar-nav__link #{"sidebar-nav__link--active" if request.path.include?("/flashcards")}" %>
+            <%= link_to "Settings", settings_path, class: "sidebar-nav__link #{"sidebar-nav__link--active" if current_page?(settings_path)}" %>
           </nav>
-        </div>
-
-        <div class="sidebar-section">
-          <label for="ui-theme" class="sidebar-label">Theme</label>
-          <select id="ui-theme" name="ui_theme" class="sidebar-select" aria-label="Select theme">
-            <option value="modern">Modern</option>
-            <option value="retro">Retro (Windows 95)</option>
-          </select>
-        </div>
-
-        <div class="sidebar-section">
-          <button id="theme-toggle" type="button" class="btn" aria-label="Toggle light/dark mode">
-            Toggle theme
-          </button>
         </div>
 
         <%= yield :sidebar_extra %>
@@ -80,8 +67,8 @@
 
       <main class="app-main">
         <div class="app-main-topbar">
-          <button id="sidebar-toggle-open" type="button" class="btn btn--ghost" aria-label="Show settings">
-            Settings
+          <button id="sidebar-toggle-open" type="button" class="btn btn--ghost" aria-label="Show navigation">
+            Menu
           </button>
         </div>
 

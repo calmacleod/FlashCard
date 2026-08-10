@@ -11,6 +11,8 @@ Rails.application.routes.draw do
 
   root "rulebook#index"
 
+  resource :settings, only: :show
+
   get "rulebook",      to: "rulebook#index", as: :rulebook
   get "rulebook/show", to: "rulebook#show",  as: :rulebook_show
 
@@ -24,6 +26,8 @@ Rails.application.routes.draw do
   delete "rule_agent",          to: "rule_agent#clear"
 
   get "flashcards", to: "flashcards#index", as: :flashcards
+
+  post "model_registry/refresh", to: "model_registry#refresh", as: :refresh_model_registry
 
   resources :documents, only: [ :index, :new, :create, :show, :destroy, :edit, :update ] do
     post :generate_schema, on: :member

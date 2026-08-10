@@ -1,0 +1,121 @@
+<% content_for :title, "Settings" %>
+
+<div class="page">
+  <div class="headline">
+    <div>
+      <h1>Settings</h1>
+      <p>Manage appearance, model availability, and application operations.</p>
+    </div>
+  </div>
+
+  <div class="settings-grid">
+    <section class="card settings-card">
+      <div class="settings-card__header">
+        <div>
+          <h2>Appearance</h2>
+          <p>These preferences are saved in this browser.</p>
+        </div>
+      </div>
+      <div class="settings-fields">
+        <label for="ui-theme">
+          Interface style
+          <select id="ui-theme" name="ui_theme" aria-label="Select interface style">
+            <option value="modern">Modern</option>
+            <option value="retro">Retro (Windows 95)</option>
+          </select>
+        </label>
+        <div>
+          <span class="field-label">Colour mode</span>
+          <button id="theme-toggle" type="button" class="btn btn--ghost" aria-label="Toggle light/dark mode">
+            Toggle theme
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card settings-card">
+      <div class="settings-card__header">
+        <div>
+          <h2>Model registry</h2>
+          <p>Refreshes current cloud models from RubyLLM. Local Ollama models are not shown in workflow selectors.</p>
+        </div>
+        <%= button_to "Update models", refresh_model_registry_path,
+              method: :post,
+              class: "btn",
+              data: { turbo_submits_with: "Updating models…" } %>
+      </div>
+
+      <div class="settings-stats">
+        <div>
+          <span class="settings-stat__value"><%= @selectable_models.size %></span>
+          <span class="settings-stat__label">Current models</span>
+        </div>
+        <div>
+          <span class="settings-stat__value"><%= model_registry_updated_at ? time_ago_in_words(model_registry_updated_at) : "Never" %></span>
+          <span class="settings-stat__label">Last refreshed</span>
+        </div>
+        <div>
+          <span class="settings-stat__value"><%= @latest_model_release&.to_date&.to_fs(:long) || "Unknown" %></span>
+          <span class="settings-stat__label">Newest release</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card settings-card">
+      <div class="settings-card__header">
+        <div>
+          <h2>Workflow defaults</h2>
+          <p>New workflows start with these models. Existing documents keep their saved selections.</p>
+        </div>
+      </div>
+      <div class="settings-defaults">
+        <% { agent: "Rule Agent", schema: "Schema generation", extraction: "Rule extraction", flashcards: "Flashcards" }.each do |context, label| %>
+          <% model = @defaults.fetch(context) %>
+          <div class="settings-default">
+            <span><%= label %></span>
+            <strong><%= model&.label || "Not available" %></strong>
+          </div>
+        <% end %>
+      </div>
+      <p class="hint">Change a model or its reasoning effort directly in the Rule Agent or a document’s settings.</p>
+    </section>
+
+    <section class="card settings-card">
+      <div class="settings-card__header">
+        <div>
+          <h2>Available models</h2>
+          <p>Only recent GPT‑5.4+ and Gemini 3.x chat models with the required workflow capabilities are listed.</p>
+        </div>
+      </div>
+      <div class="settings-model-groups">
+        <% @models_by_provider.each_value do |models| %>
+          <details class="settings-model-group" open>
+            <summary><%= models.first.provider_label %> <span class="badge"><%= models.size %></span></summary>
+            <div class="settings-model-list">
+              <% models.each do |model| %>
+                <% thinking = LlmModelCatalog.thinking_configuration(model) %>
+                <div class="settings-model">
+                  <div>
+                    <strong><%= model.name %></strong>
+                    <code><%= model.model_id %></code>
+                  </div>
+                  <span class="meta"><%= thinking[:efforts].presence&.join(" · ") || "No thinking control" %></span>
+                </div>
+              <% end %>
+            </div>
+          </details>
+        <% end %>
+      </div>
+    </section>
+
+    <section class="card settings-card">
+      <div class="settings-card__header">
+        <div>
+          <h2>Operations</h2>
+          <p>Inspect background schema and flashcard generation jobs.</p>
+        </div>
+        <%= link_to "View jobs", "/jobs", class: "btn btn--ghost" %>
+      </div>
+    </section>
+  </div>
+</div>
