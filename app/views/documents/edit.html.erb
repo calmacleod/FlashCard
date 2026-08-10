@@ -20,6 +20,16 @@
       <% end %>
 
       <div class="form-grid">
+        <%= render "model_setting", document: @document, context: :schema,
+              models: @structured_models, title: "Schema generation",
+              description: "Used when proposing or regenerating this document's JSON Schema." %>
+        <%= render "model_setting", document: @document, context: :extraction,
+              models: @structured_models, title: "Rule extraction",
+              description: "Used to turn document chunks into structured rule entries." %>
+        <%= render "model_setting", document: @document, context: :flashcards,
+              models: @structured_models, title: "Flashcard generation",
+              description: "Used to turn extracted rule entries into study cards." %>
+
         <%# ── Property builder ── %>
         <div>
           <label>Properties</label>
@@ -56,7 +66,7 @@
           <label>JSON Schema</label>
           <p class="hint">Updated live by the builder above. You can also edit it directly.</p>
           <%= f.text_area :extraction_schema,
-                data: { "schema-builder-target": "output" },
+                data: { "schema-builder-target": "output", action: "change->schema-builder#loadJson" },
                 style: "font-family: var(--font-mono); font-size: 12px; min-height: 260px; margin-top: 8px;",
                 placeholder: '{"type":"object","properties":{},"additionalProperties":false}' %>
         </div>

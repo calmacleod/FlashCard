@@ -1,0 +1,32 @@
+<% setting = document.llm_setting(context) %>
+<% configurations = LlmModelCatalog.configuration_map(models) %>
+<% thinking = LlmModelCatalog.thinking_configuration(setting.fetch("model")) %>
+<fieldset class="model-setting"
+          data-controller="model-settings"
+          data-model-settings-configurations-value="<%= configurations.to_json %>">
+  <legend><%= title %></legend>
+  <p class="hint"><%= description %></p>
+
+  <label>
+    Model
+    <%= select_tag "document[llm_settings][#{context}][model]",
+          options_for_select(models.map { |model| [model.label, model.key] }, setting.fetch("model")),
+          data: { model_settings_target: "model", action: "change->model-settings#refresh" } %>
+  </label>
+
+  <div class="model-setting__controls">
+    <label data-model-settings-target="effortField" <%= "hidden" unless thinking[:mode] == "effort" %>>
+      Thinking effort
+      <%= select_tag "document[llm_settings][#{context}][effort]",
+            options_for_select([["Provider default", ""]] + thinking[:efforts].map { |value| [value, value] }, setting["effort"]),
+            disabled: thinking[:mode] != "effort", data: { model_settings_target: "effort" } %>
+    </label>
+    <label data-model-settings-target="budgetField" <%= "hidden" unless thinking[:mode] == "budget" %>>
+      Thinking budget
+      <%= number_field_tag "document[llm_settings][#{context}][budget]", setting["budget"],
+            min: 0, max: 65_536, step: 1, disabled: thinking[:mode] != "budget",
+            placeholder: "Provider default", data: { model_settings_target: "budget" } %>
+    </label>
+  </div>
+  <p class="hint" data-model-settings-target="hint"></p>
+</fieldset>

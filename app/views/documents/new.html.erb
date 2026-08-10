@@ -36,6 +36,10 @@
           <p class="hint">Accepted formats: PDF, plain text (.txt)</p>
         </div>
 
+        <%= render "model_setting", document: @document, context: :schema,
+              models: @structured_models, title: "Automatic schema generation",
+              description: "A schema will be proposed after upload. You can review and edit it before extraction." %>
+
         <div class="actions" style="margin-top: 0;">
           <%= f.submit "Upload Document", class: "btn" %>
         </div>

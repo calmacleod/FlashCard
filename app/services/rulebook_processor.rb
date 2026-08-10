@@ -22,8 +22,8 @@ class RulebookProcessor
     end
   end
 
-  def self.process(pdf_path, model: "gemini-3-flash-preview", delay: 0, max_tokens: nil, headless: false, on_chunk_done: nil)
-    new(pdf_path, model:, delay:, max_tokens:, headless:, on_chunk_done:).run
+  def self.process(pdf_path, model: "gemini-3-flash-preview", thinking: {}, delay: 0, max_tokens: nil, headless: false, on_chunk_done: nil)
+    new(pdf_path, model:, thinking:, delay:, max_tokens:, headless:, on_chunk_done:).run
   end
 
   def self.preview_text(pdf_path, show_chunks: false)
@@ -80,9 +80,10 @@ class RulebookProcessor
     end
   end
 
-  def initialize(pdf_path, model:, delay: 0, max_tokens: nil, headless: false, on_chunk_done: nil)
+  def initialize(pdf_path, model:, thinking: {}, delay: 0, max_tokens: nil, headless: false, on_chunk_done: nil)
     @pdf_path       = pdf_path
     @model          = model
+    @thinking       = thinking
     @delay          = delay.to_f
     @max_words      = max_tokens ? (max_tokens / TOKENS_PER_WORD).ceil : nil
     @headless       = headless
@@ -404,11 +405,8 @@ class RulebookProcessor
 
   def extract_units(chunk_text)
     chat     = RubyLLM.chat(model: @model)
-    response = chat
-                 .with_thinking(effort: "low")
-                 .with_temperature(0.1)
-                 .with_schema(UnitSchema)
-                 .ask(prompt_for(chunk_text))
+    chat.with_thinking(**@thinking) if @thinking.any?
+    response = chat.with_temperature(0.1).with_schema(UnitSchema).ask(prompt_for(chunk_text))
     track_usage(response)
     parse_response(response.content)
   rescue JSON::ParserError => e

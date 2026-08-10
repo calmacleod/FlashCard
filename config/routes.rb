@@ -26,6 +26,7 @@ Rails.application.routes.draw do
   get "flashcards", to: "flashcards#index", as: :flashcards
 
   resources :documents, only: [ :index, :new, :create, :show, :destroy, :edit, :update ] do
+    post :generate_schema, on: :member
     resource :flashcards, only: [ :show, :create ]
   end
 

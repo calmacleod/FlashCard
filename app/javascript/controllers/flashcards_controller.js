@@ -1,13 +1,24 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["card", "counter", "dots"]
+  static targets = ["card", "counter", "dots", "prev", "next"]
   static values  = { total: Number }
 
   connect() {
     this.current = 0
     this.flipped  = false
     this.updateDisplay()
+  }
+
+  keydown(event) {
+    const interactive = event.target.closest("button, input, select, textarea, a")
+    if (interactive) return
+    if (event.key === "ArrowLeft") this.prev()
+    if (event.key === "ArrowRight") this.next()
+    if (event.key === " " || event.key === "Enter") {
+      event.preventDefault()
+      this.flip()
+    }
   }
 
   flip() {
@@ -29,7 +40,11 @@ export default class extends Controller {
     }
   }
 
-  go(index) {
+  go(indexOrEvent) {
+    const index = typeof indexOrEvent === "number"
+      ? indexOrEvent
+      : Number(indexOrEvent.currentTarget.dataset.index)
+    if (!Number.isInteger(index) || index < 0 || index >= this.totalValue) return
     this.activeCard()?.classList.remove("fc-card--active", "fc-card--flipped")
     this.current = index
     this.flipped = false
@@ -51,6 +66,10 @@ export default class extends Controller {
         dot.classList.toggle("fc-dot--active", i === this.current)
       })
     }
+
+
+    if (this.hasPrevTarget) this.prevTarget.disabled = this.current === 0
+    if (this.hasNextTarget) this.nextTarget.disabled = this.current === this.totalValue - 1
   }
 
   activeCard() {

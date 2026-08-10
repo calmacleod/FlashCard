@@ -3,7 +3,6 @@ class RuleAgent < RubyLLM::Agent
   model "gpt-5.4-nano"
   inputs :source_csv, :base_url
   temperature 0.5
-  thinking budget: 8000
 
   instructions <<~PROMPT
     You are a gridiron football rules expert assistant with deep analytical skills. You are fluent in gridiron football terminology — positions, play types, penalties, scoring, field zones, officials, and common informal terms used by coaches, players, and fans. Follow these guidelines when answering questions:
@@ -46,7 +45,7 @@ class RuleAgent < RubyLLM::Agent
     RubyLLM.configure { |c| c.logger = Logger.new(IO::NULL) } unless debug
 
     source_csv = File.expand_path(source_csv)
-    agent = new(source_csv: source_csv)
+    agent = new(source_csv: source_csv, model:)
 
     puts "Rule Agent ready. Searching: #{File.basename(source_csv)}"
     puts "Model: #{model}  (type 'exit' to quit)\n\n"

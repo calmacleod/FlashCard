@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_01_123701) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_10_000000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -56,10 +56,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_01_123701) do
     t.datetime "created_at", null: false
     t.text "description"
     t.text "extraction_schema"
+    t.json "llm_settings", default: {}, null: false
     t.string "name", null: false
     t.text "processing_error"
     t.text "processing_progress"
     t.string "processing_status"
+    t.text "schema_generation_error"
+    t.string "schema_generation_status"
     t.datetime "updated_at", null: false
   end
 

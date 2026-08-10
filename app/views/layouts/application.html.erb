@@ -11,6 +11,22 @@
 
     <%= yield :head %>
 
+    <%= javascript_tag nonce: true do %>
+      (() => {
+        try {
+          const root = document.documentElement
+          const theme = localStorage.getItem("cards.theme")
+          if (theme === "light" || theme === "dark") root.dataset.theme = theme
+          root.dataset.uiTheme = localStorage.getItem("cards.uiTheme") === "retro" ? "retro" : "modern"
+          const savedSidebar = localStorage.getItem("cards.sidebar")
+          root.dataset.sidebar = savedSidebar || (matchMedia("(max-width: 760px)").matches ? "closed" : "open")
+        } catch (_) {
+          document.documentElement.dataset.uiTheme = "modern"
+          document.documentElement.dataset.sidebar = "open"
+        }
+      })()
+    <% end %>
+
     <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
     <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
 
@@ -37,7 +53,7 @@
         <div class="sidebar-section">
           <span class="sidebar-label">Navigation</span>
           <nav class="sidebar-nav">
-            <%= link_to "Rulebook", rulebook_path, class: "sidebar-nav__link #{"sidebar-nav__link--active" if current_page?(rulebook_path)}" %>
+            <%= link_to "Rulebook", rulebook_path, class: "sidebar-nav__link #{"sidebar-nav__link--active" if current_page?(root_path) || current_page?(rulebook_path)}" %>
             <%= link_to "Rule Search", rule_search_path, class: "sidebar-nav__link #{"sidebar-nav__link--active" if current_page?(rule_search_path) || request.path.start_with?("/rule_search")}" %>
             <%= link_to "Rule Agent", rule_agent_path, class: "sidebar-nav__link #{"sidebar-nav__link--active" if request.path.start_with?("/rule_agent")}" %>
             <%= link_to "Documents", documents_path, class: "sidebar-nav__link #{"sidebar-nav__link--active" if request.path.start_with?("/documents") && !request.path.include?("/flashcards")}" %>
@@ -68,6 +84,10 @@
             Settings
           </button>
         </div>
+
+        <% flash.each do |type, message| %>
+          <div class="flash <%= "flash--error" if type.to_s == "alert" %>" role="status"><%= message %></div>
+        <% end %>
 
         <%= yield %>
       </main>

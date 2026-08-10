@@ -17,7 +17,7 @@
     <div class="card-list">
       <% @documents.each do |doc| %>
         <div class="card">
-          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+          <div class="document-toolbar">
             <div>
               <strong><%= link_to doc.name, document_path(doc), class: "link" %></strong>
               <% if doc.description.present? %>

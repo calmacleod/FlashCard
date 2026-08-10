@@ -16,6 +16,7 @@
   --radius-sm: 10px;
   --radius-md: 14px;
   --radius-pill: 999px;
+  --radius: var(--radius-md);
 
   /* Spacing */
   --space-1: 6px;
@@ -253,6 +254,20 @@ code {
   padding: var(--space-6) 20px 70px;
 }
 
+.page--wide { max-width: 1100px; }
+
+.flash {
+  max-width: 920px;
+  margin: 14px auto 0;
+  padding: 10px 14px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--border));
+  border-radius: var(--radius-sm);
+}
+
+.flash--error { background: var(--danger-bg); color: var(--danger-text); }
+
 /* App shell (sidebar + main content) */
 .app-shell {
   display: flex;
@@ -387,6 +402,7 @@ label {
 }
 
 input[type="text"],
+input[type="number"],
 textarea,
 select {
   width: 100%;
@@ -411,6 +427,7 @@ textarea {
 }
 
 input[type="text"]:focus,
+input[type="number"]:focus,
 textarea:focus,
 select:focus {
   border-color: color-mix(in srgb, var(--primary), var(--border-2) 35%);
@@ -772,7 +789,13 @@ body.rule-agent-fullscreen .rule-agent {
   display: flex;
   gap: var(--space-2);
   margin-bottom: var(--space-2);
+  flex-wrap: wrap;
+  align-items: end;
 }
+
+.rule-agent__thinking { font-size: 11px; color: var(--muted); }
+.rule-agent__thinking[hidden] { display: none; }
+.rule-agent__thinking input { width: 110px; margin-top: 2px; padding: 6px 10px; }
 
 .rule-agent__source-select {
   width: auto;
@@ -978,7 +1001,7 @@ body.rule-agent-fullscreen .rule-agent {
 /* Rulebook viewer */
 .rulebook-back {
   font-size: 14px;
-  color: var(--text-muted);
+  color: var(--muted);
   text-decoration: none;
 }
 
@@ -1312,6 +1335,45 @@ details[open] > .rulebook-section__summary::before {
   flex-shrink: 0;
 }
 
+.model-setting {
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  min-width: 0;
+}
+
+.model-setting legend { padding: 0 6px; font-weight: 700; }
+.model-setting > .hint:first-of-type { margin: 0 0 10px; }
+.model-setting__controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 10px; }
+.model-setting [hidden] { display: none; }
+
+.document-toolbar,
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.code-block,
+.text-preview {
+  margin: 0;
+  padding: 14px;
+  overflow: auto;
+  max-height: 320px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font: 12px/1.55 var(--font-mono);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.stack { display: grid; gap: 18px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
 /* Responsive polish */
 @media (max-width: 640px) {
   .page {
@@ -1325,6 +1387,24 @@ details[open] > .rulebook-section__summary::before {
   .card {
     padding: 18px;
   }
+}
+
+@media (max-width: 760px) {
+  .app-sidebar {
+    position: fixed;
+    z-index: 100;
+    width: min(280px, calc(100vw - 48px));
+    height: 100dvh;
+    transform: translateX(-100%);
+    transition: transform 160ms ease;
+    box-shadow: var(--shadow-md);
+  }
+
+  html[data-sidebar="open"] .app-sidebar { transform: translateX(0); }
+  html[data-sidebar="closed"] .app-sidebar { width: min(280px, calc(100vw - 48px)); padding: 14px; border-right-color: var(--border); }
+  .app-main { width: 100%; }
+  .rule-agent { height: calc(100dvh - 54px); padding-inline: 12px; }
+  .rule-agent__selects > select { width: 100%; }
 }
 
 /* ── Job progress pipeline ───────────────────────────────────────────────── */
@@ -1581,6 +1661,10 @@ details[open] > .rulebook-section__summary::before {
 }
 
 .fc-dot {
+  display: block;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
   width: 7px;
   height: 7px;
   border-radius: 50%;

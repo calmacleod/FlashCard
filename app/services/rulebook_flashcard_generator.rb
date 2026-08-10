@@ -23,13 +23,14 @@ class RulebookFlashcardGenerator
 
   BAR_WIDTH = 30
 
-  def self.generate(csv_path, model: "gpt-5.4-nano", output: nil, delay: 0, on_group_done: nil)
-    new(csv_path, model:, output:, delay:, on_group_done:).run
+  def self.generate(csv_path, model: "gpt-5.4-nano", thinking: {}, output: nil, delay: 0, on_group_done: nil)
+    new(csv_path, model:, thinking:, output:, delay:, on_group_done:).run
   end
 
-  def initialize(csv_path, model:, output: nil, delay: 0, on_group_done: nil)
+  def initialize(csv_path, model:, thinking: {}, output: nil, delay: 0, on_group_done: nil)
     @csv_path      = File.expand_path(csv_path)
     @model         = model
+    @thinking      = thinking
     @output        = output ? File.expand_path(output) : default_output_path
     @delay         = delay.to_f
     @on_group_done = on_group_done
@@ -114,10 +115,8 @@ class RulebookFlashcardGenerator
 
   def generate_cards(rule_number, section, entries)
     chat     = RubyLLM.chat(model: @model)
-    response = chat
-                 .with_thinking(budget: 0)
-                 .with_schema(CardSchema)
-                 .ask(prompt_for(rule_number, section, entries))
+    chat.with_thinking(**@thinking) if @thinking.any?
+    response = chat.with_schema(CardSchema).ask(prompt_for(rule_number, section, entries))
 
     track_usage(response)
     data = response.content.is_a?(Hash) ? response.content : JSON.parse(response.content)

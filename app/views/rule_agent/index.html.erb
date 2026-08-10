@@ -65,18 +65,32 @@
   <div class="rule-agent__form">
     <%= form_with url: rule_agent_messages_path,
                   data: { turbo_stream: true, action: "submit->rule-agent#onSubmit turbo:submit-end->rule-agent#onSubmitEnd", rule_agent_target: "form" } do |f| %>
-      <div class="rule-agent__selects">
+      <% thinking = LlmModelCatalog.thinking_configuration(@selected_model) %>
+      <div class="rule-agent__selects" data-controller="model-settings"
+           data-model-settings-configurations-value="<%= @thinking_configurations.to_json %>">
         <%= select_tag :source_csv, options_for_select(@sources.map { |s| [File.basename(s), s] }, @source),
               class: "rule-agent__source-select" %>
-        <%= select_tag :model, options_for_select([
-              ["gpt-5.4", "gpt-5.4"],
-              ["gpt-5.4-nano", "gpt-5.4-nano"],
-              ["gemini-2.5-flash-lite", "gemini-2.5-flash-lite"],
-              ["gpt-5.2", "gpt-5.2"],
-              ["gemini-2.0-flash",      "gemini-2.0-flash"],
-              ["gemini-2.5-flash",      "gemini-2.5-flash"],
-            ], @chat.model_id || "gpt-5.4-nano"),
-              class: "rule-agent__source-select" %>
+        <%= select_tag :model,
+              options_for_select(@agent_models.map { |model| [model.label, model.key] }, @selected_model),
+              class: "rule-agent__source-select",
+              aria: { label: "Model" },
+              data: { model_settings_target: "model", action: "change->model-settings#refresh" } %>
+        <label class="rule-agent__thinking" data-model-settings-target="effortField"
+               <%= "hidden" unless thinking[:mode] == "effort" %>>
+          <span>Effort</span>
+          <%= select_tag :thinking_effort,
+                options_for_select([["Default", ""]] + thinking[:efforts].map { |value| [value, value] }),
+                disabled: thinking[:mode] != "effort", class: "rule-agent__source-select",
+                data: { model_settings_target: "effort" } %>
+        </label>
+        <label class="rule-agent__thinking" data-model-settings-target="budgetField"
+               <%= "hidden" unless thinking[:mode] == "budget" %>>
+          <span>Budget</span>
+          <%= number_field_tag :thinking_budget, nil, min: 0, max: 65_536,
+                disabled: thinking[:mode] != "budget", placeholder: "Default",
+                data: { model_settings_target: "budget" } %>
+        </label>
+        <span class="visually-hidden" data-model-settings-target="hint"></span>
       </div>
       <div class="rule-agent__input-row">
         <%= f.text_area :message,

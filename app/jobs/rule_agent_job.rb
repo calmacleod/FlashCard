@@ -4,8 +4,9 @@ class RuleAgentJob < ApplicationJob
   THINKING_BROADCAST_EVERY = 200 # characters
   CONTENT_BROADCAST_EVERY  = 100 # characters
 
-  def perform(chat_id, source_csv, base_url)
+  def perform(chat_id, source_csv, base_url, thinking = {})
     agent = RuleAgent.find(chat_id, source_csv: source_csv, base_url: base_url)
+    agent.with_thinking(**thinking.symbolize_keys) if thinking.present?
 
     # Stream thinking and content tokens to the client as they arrive.
     accumulated_thinking        = +""

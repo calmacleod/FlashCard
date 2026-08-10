@@ -11,15 +11,16 @@
     <%= link_to "← Back to Documents", documents_path, class: "link" %>
   </div>
 
+  <div class="stack">
   <div class="card">
     <% if @document.file.attached? %>
-      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
+      <div class="document-toolbar" style="margin-bottom: 16px;">
         <div>
           <span class="badge"><%= @document.file.content_type == "application/pdf" ? "PDF" : "TXT" %></span>
           &ensp;
           <%= link_to @document.file.filename, rails_blob_path(@document.file, disposition: :attachment), class: "link" %>
         </div>
-        <p class="meta" style="margin: 0;">Uploaded <%= @document.created_at.strftime("%B %-d, %Y at %-I:%M %p") %></p>
+        <p class="meta">Uploaded <%= @document.created_at.strftime("%B %-d, %Y at %-I:%M %p") %></p>
       </div>
 
       <% if @document.file.content_type == "application/pdf" %>
@@ -32,7 +33,7 @@
           </iframe>
         </details>
       <% elsif @document.file.content_type == "text/plain" %>
-        <pre style="white-space: pre-wrap; word-break: break-word; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; font-size: 13px; line-height: 1.6; max-height: 80vh; overflow-y: auto;"><%= @document.file.download %></pre>
+        <pre class="text-preview"><%= @document.file.download %></pre>
       <% end %>
     <% else %>
       <p class="meta">No file attached.</p>
@@ -49,8 +50,8 @@
 
   <%= turbo_stream_from "document_#{@document.id}_status" %>
 
-  <div class="card" style="margin-top: 18px;">
-    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+  <div class="card">
+    <div class="section-heading">
       <div>
         <strong>Flashcards</strong>
         <% count = @document.flashcards.count %>
@@ -58,16 +59,18 @@
           <span class="badge" style="margin-left: 8px;"><%= count %> cards</span>
         <% end %>
       </div>
-      <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+      <div class="actions" style="margin-top: 0;">
         <% if @document.flashcards.any? %>
           <%= link_to "View Flashcards", document_flashcards_path(@document), class: "btn" %>
         <% end %>
-        <%= button_to @document.flashcards.any? ? "Regenerate" : "Generate Flashcards",
+        <% if @document.file.content_type == "application/pdf" %>
+          <%= button_to @document.flashcards.any? ? "Regenerate" : "Generate Flashcards",
               document_flashcards_path(@document),
               method: :post,
               class: "btn btn--ghost",
               disabled: @document.processing_status == "processing",
               data: { turbo_confirm: @document.flashcards.any? ? "Regenerate flashcards? Existing cards will be replaced." : nil } %>
+        <% end %>
       </div>
     </div>
     <div style="margin-top: 12px;">
@@ -75,13 +78,24 @@
     </div>
   </div>
 
-  <% if @document.extraction_schema.present? %>
-    <div class="card" style="margin-top: 18px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+  <div class="card">
+      <div class="section-heading" style="margin-bottom: 12px;">
         <strong>Extraction Schema</strong>
-        <%= link_to "Edit", edit_document_path(@document), class: "link", style: "font-size: 13px;" %>
+        <div class="actions" style="margin-top: 0;">
+          <%= link_to "Edit settings", edit_document_path(@document), class: "btn btn--sm btn--ghost" %>
+          <%= button_to "Regenerate", generate_schema_document_path(@document), method: :post,
+                class: "btn btn--sm btn--ghost", disabled: %w[queued generating].include?(@document.schema_generation_status) %>
+        </div>
       </div>
-      <pre style="margin: 0; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; font-size: 12px; line-height: 1.55; overflow: auto; max-height: 320px; font-family: var(--font-mono); white-space: pre;"><%= JSON.pretty_generate(@document.extraction_schema_hash) %></pre>
-    </div>
-  <% end %>
+      <% if %w[queued generating].include?(@document.schema_generation_status) %>
+        <p class="flashcard-status flashcard-status--processing"><span class="flashcard-status__spinner"></span>Generating schema…</p>
+      <% elsif @document.schema_generation_status == "failed" %>
+        <div class="alert">Schema generation failed: <%= @document.schema_generation_error %></div>
+      <% elsif @document.extraction_schema.present? %>
+        <pre class="code-block"><%= JSON.pretty_generate(@document.extraction_schema_hash) %></pre>
+      <% else %>
+        <p class="meta">No extraction schema has been generated yet.</p>
+      <% end %>
+  </div>
+  </div>
 </div>

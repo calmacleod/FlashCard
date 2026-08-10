@@ -1,5 +1,6 @@
 class DocumentsController < ApplicationController
-  before_action :set_document, only: [ :show, :edit, :update, :destroy ]
+  before_action :set_document, only: [ :show, :edit, :update, :destroy, :generate_schema ]
+  before_action :load_model_options, only: [ :new, :create, :edit, :update ]
 
   def index
     @documents = Document.with_attached_file.order(created_at: :desc)
@@ -11,8 +12,10 @@ class DocumentsController < ApplicationController
 
   def create
     @document = Document.new(document_params)
+    @document.update_llm_settings(llm_settings_params)
     if @document.save
-      redirect_to @document, notice: "Document uploaded successfully."
+      enqueue_schema_generation
+      redirect_to @document, notice: "Document uploaded successfully. Its extraction schema is being generated."
     else
       render :new, status: :unprocessable_entity
     end
@@ -23,11 +26,18 @@ class DocumentsController < ApplicationController
   def edit; end
 
   def update
-    if @document.update(document_schema_params)
-      redirect_to @document, notice: "Schema updated."
+    @document.assign_attributes(document_schema_params)
+    @document.update_llm_settings(llm_settings_params)
+    if @document.save
+      redirect_to @document, notice: "Document settings updated."
     else
       render :edit, status: :unprocessable_entity
     end
+  end
+
+  def generate_schema
+    enqueue_schema_generation
+    redirect_to @document, notice: "Schema generation started."
   end
 
   def destroy
@@ -47,5 +57,23 @@ class DocumentsController < ApplicationController
 
   def document_schema_params
     params.require(:document).permit(:extraction_schema)
+  end
+
+  def llm_settings_params
+    params.fetch(:document, {}).fetch(:llm_settings, {}).permit(
+      schema: %i[model effort budget],
+      extraction: %i[model effort budget],
+      flashcards: %i[model effort budget]
+    )
+  end
+
+  def load_model_options
+    current = @document&.llm_setting(:schema)&.fetch("model", nil)
+    @structured_models = LlmModelCatalog.options(capability: :structured_output, current:)
+  end
+
+  def enqueue_schema_generation
+    @document.update!(schema_generation_status: "queued", schema_generation_error: nil)
+    DocumentSchemaGenerationJob.perform_later(@document.id)
   end
 end

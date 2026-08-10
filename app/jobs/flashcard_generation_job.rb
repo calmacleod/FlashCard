@@ -5,6 +5,10 @@ class FlashcardGenerationJob < ApplicationJob
 
   def perform(document_id)
     @document = Document.find(document_id)
+    raise ArgumentError, "Flashcard generation currently requires a PDF document" unless @document.file.content_type == "application/pdf"
+
+    extraction_model, extraction_thinking = model_configuration(:extraction)
+    flashcard_model, flashcard_thinking = model_configuration(:flashcards)
 
     update_progress(stage: "extracting_text")
 
@@ -19,6 +23,8 @@ class FlashcardGenerationJob < ApplicationJob
     update_progress(stage: "processing_chunks")
     RulebookProcessor.process(
       pdf_path,
+      model:         extraction_model.model_id,
+      thinking:      extraction_thinking,
       headless:      true,
       on_chunk_done: ->(done, total, articles) {
         update_progress(
@@ -63,6 +69,8 @@ class FlashcardGenerationJob < ApplicationJob
     )
     RulebookFlashcardGenerator.generate(
       csv_path,
+      model:         flashcard_model.model_id,
+      thinking:      flashcard_thinking,
       output:        anki_csv,
       on_group_done: ->(done, total, cards) {
         update_progress(
@@ -111,6 +119,15 @@ class FlashcardGenerationJob < ApplicationJob
   end
 
   private
+
+  def model_configuration(context)
+    settings = @document.llm_setting(context)
+    entry = LlmModelCatalog.find!(settings.fetch("model"), capability: :structured_output)
+    thinking = LlmModelCatalog.thinking_params(
+      entry, effort: settings["effort"], budget: settings["budget"]
+    )
+    [ entry, thinking ]
+  end
 
   def update_progress(attrs)
     current = @document.processing_progress ? JSON.parse(@document.processing_progress) : {}

@@ -8,8 +8,16 @@ export default class extends Controller {
   static targets = ["rows", "output", "additionalProperties"]
 
   connect() {
+    this.loadJson()
+  }
+
+  loadJson() {
     const json = this.outputTarget.value.trim()
-    if (!json) return
+    this.rowsTarget.querySelectorAll(":scope > .schema-row").forEach(row => row.remove())
+    if (!json) {
+      this.render()
+      return
+    }
     try {
       const schema = JSON.parse(json)
       if (schema?.type === "object") {

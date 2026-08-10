@@ -15,6 +15,11 @@ class RuleAgentController < ApplicationController
 
     @chat ||= find_or_create_chat
     @source = @chat.source_csv || @sources.first
+    current_model = current_model_key(@chat)
+    @agent_models = LlmModelCatalog.options(capability: :function_calling, current: current_model)
+    @selected_model = @agent_models.find { |model| model.key == current_model }&.key ||
+      LlmModelCatalog.default(:agent) || @agent_models.first&.key
+    @thinking_configurations = LlmModelCatalog.configuration_map(@agent_models)
 
     user_msgs      = @chat.messages.where(role: :user)
     assistant_msgs = @chat.messages.where(role: :assistant).where.not(content: [ nil, "" ])
@@ -34,8 +39,8 @@ class RuleAgentController < ApplicationController
     return head :bad_request if input.blank?
 
     chat = find_or_create_chat
-    model_name = params[:model].presence || "gpt-5.4-nano"
-    chat.with_model(model_name) if chat.model_id != model_name
+    entry = LlmModelCatalog.find!(params[:model].presence || LlmModelCatalog.default(:agent), capability: :function_calling)
+    chat.with_model(entry.model_id, provider: entry.provider.to_sym) if current_model_key(chat) != entry.key
     chat.update!(source_csv: source)
 
     chat.update!(title: input.truncate(60)) unless chat.title.present?
@@ -44,7 +49,10 @@ class RuleAgentController < ApplicationController
     @user_message_record = chat.messages.where(role: :user).order(:created_at).last
 
     base_url = "#{request.scheme}://#{request.host_with_port}"
-    RuleAgentJob.perform_later(chat.id, source, base_url)
+    thinking = LlmModelCatalog.thinking_params(
+      entry, effort: params[:thinking_effort], budget: params[:thinking_budget]
+    )
+    RuleAgentJob.perform_later(chat.id, source, base_url, thinking)
 
     @chat_id = chat.id
 
@@ -93,11 +101,16 @@ class RuleAgentController < ApplicationController
   def find_or_create_chat
     token = cookies[SESSION_COOKIE].presence || SecureRandom.hex(16)
     set_session_cookie(token) unless cookies[SESSION_COOKIE]
-    model_name = params[:model].presence || "gpt-5.4-nano"
+    entry = LlmModelCatalog.find!(params[:model].presence || LlmModelCatalog.default(:agent), capability: :function_calling)
     Chat.find_or_create_by!(session_token: token) do |c|
-      c.model         = Model.find_by(model_id: model_name)
+      c.model         = Model.find_by!(provider: entry.provider, model_id: entry.model_id)
       c.browser_token = browser_token
     end
+  end
+
+  def current_model_key(chat)
+    model = chat.model_association
+    "#{model.provider}:#{model.model_id}" if model
   end
 
   def set_session_cookie(token)
