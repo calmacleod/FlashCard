@@ -6,6 +6,11 @@ require "rails/all"
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
 
+# RubyLLM's association API must be selected before Rails loads the models.
+RubyLLM.configure do |config|
+  config.use_new_acts_as = true
+end
+
 module Cards
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
@@ -24,6 +29,6 @@ module Cards
     # config.time_zone = "Central Time (US & Canada)"
     # config.eager_load_paths << Rails.root.join("extras")
     config.mission_control.jobs.http_basic_auth_enabled = false
-    config.mission_control.jobs.adapters = [:solid_queue]
+    config.mission_control.jobs.adapters = [ :solid_queue ]
   end
 end

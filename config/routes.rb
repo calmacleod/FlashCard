@@ -25,8 +25,8 @@ Rails.application.routes.draw do
 
   get "flashcards", to: "flashcards#index", as: :flashcards
 
-  resources :documents, only: [:index, :new, :create, :show, :destroy, :edit, :update] do
-    resource :flashcards, only: [:show, :create]
+  resources :documents, only: [ :index, :new, :create, :show, :destroy, :edit, :update ] do
+    resource :flashcards, only: [ :show, :create ]
   end
 
   mount MissionControl::Jobs::Engine, at: "/jobs"

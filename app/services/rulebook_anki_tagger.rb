@@ -46,14 +46,14 @@ class RulebookAnkiTagger
   # Returns [rule_tag, section_tag] as underscore-slugged strings.
   def extract_tags(front)
     match = front.to_s.match(/<i>(.*?)<\/i>\s*\z/m)
-    return ["", ""] unless match
+    return [ "", "" ] unless match
 
     parts = match[1].split("|").map(&:strip)
 
     rule_tag    = slug(parts.find { |p| p.match?(/\Arule\s/i) })
     section_tag = slug(parts.find { |p| p.match?(/\Asection\s/i) })
 
-    [rule_tag, section_tag]
+    [ rule_tag, section_tag ]
   end
 
   def tag_row(row)

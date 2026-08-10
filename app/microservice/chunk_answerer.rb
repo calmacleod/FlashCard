@@ -64,7 +64,7 @@ class ChunkAnswerer
   private
 
   def build_user_prompt(prompt, chunks)
-    lines = ["Context chunks:"]
+    lines = [ "Context chunks:" ]
 
     chunks.each_with_index do |result, idx|
       page_note = result.chunk.first_page ? " (page #{result.chunk.first_page})" : ""

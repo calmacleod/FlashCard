@@ -51,8 +51,10 @@ class RuleAgent < RubyLLM::Agent
     puts "Rule Agent ready. Searching: #{File.basename(source_csv)}"
     puts "Model: #{model}  (type 'exit' to quit)\n\n"
 
-    input_tokens  = 0
-    output_tokens = 0
+    input_tokens       = 0
+    cache_read_tokens  = 0
+    cache_write_tokens = 0
+    output_tokens      = 0
 
     loop do
       print "You: "
@@ -61,23 +63,29 @@ class RuleAgent < RubyLLM::Agent
       next if input.empty?
 
       response = agent.ask(input)
-      input_tokens  += response.input_tokens.to_i
-      output_tokens += response.output_tokens.to_i
+      input_tokens       += response.input_tokens.to_i
+      cache_read_tokens  += response.cache_read_tokens.to_i
+      cache_write_tokens += response.cache_write_tokens.to_i
+      output_tokens      += response.output_tokens.to_i
 
       if response.content.nil? || response.content.strip.empty?
         response = agent.ask("Please summarize the results you just retrieved from the tools and answer my question.")
-        input_tokens  += response.input_tokens.to_i
-        output_tokens += response.output_tokens.to_i
+        input_tokens       += response.input_tokens.to_i
+        cache_read_tokens  += response.cache_read_tokens.to_i
+        cache_write_tokens += response.cache_write_tokens.to_i
+        output_tokens      += response.output_tokens.to_i
       end
 
       puts "\nAgent: #{response.content}\n\n"
     end
 
-    total = input_tokens + output_tokens
+    total = input_tokens + cache_read_tokens + cache_write_tokens + output_tokens
     puts "─" * 40
     puts "Token usage:"
-    puts "  Input:  #{input_tokens.to_s.rjust(10)}"
-    puts "  Output: #{output_tokens.to_s.rjust(10)}"
-    puts "  Total:  #{total.to_s.rjust(10)}"
+    puts "  Input:       #{input_tokens.to_s.rjust(10)}"
+    puts "  Cache read:  #{cache_read_tokens.to_s.rjust(10)}"
+    puts "  Cache write: #{cache_write_tokens.to_s.rjust(10)}"
+    puts "  Output:      #{output_tokens.to_s.rjust(10)}"
+    puts "  Total:       #{total.to_s.rjust(10)}"
   end
 end

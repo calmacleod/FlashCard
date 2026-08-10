@@ -133,10 +133,10 @@ class RulebookAssembler
       end
 
       indent = case
-               when u.article then "        "
-               when u.section then "      "
-               else                "    "
-               end
+      when u.article then "        "
+      when u.section then "      "
+      else                "    "
+      end
 
       wrap(u.text, LINE_WIDTH - indent.length).each { |line| puts "#{indent}#{line}" }
       puts
@@ -218,10 +218,10 @@ class RulebookAssembler
 
     outpath = if @output
                 Pathname.new(@output)
-              else
+    else
                 stem = File.basename(@key, File.extname(@key))
                 Rails.root.join("output", "#{stem}.csv")
-              end
+    end
     FileUtils.mkdir_p(outpath.dirname)
 
     CSV.open(outpath, "w") do |csv|

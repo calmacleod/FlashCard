@@ -51,6 +51,6 @@ class RuleDefinitionLookupTool < RubyLLM::Tool
     # Fallback: column contains the digit-only part as a whole word/token.
     # Use the longer normalized form for LIKE to stay precise.
     like_value = exact_candidates.max_by(&:length)
-    scope.where("#{column} LIKE ?", "%#{like_value}%")
+    scope.where(scope.klass.arel_table[column].matches("%#{like_value}%"))
   end
 end

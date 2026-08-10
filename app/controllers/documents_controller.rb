@@ -1,5 +1,5 @@
 class DocumentsController < ApplicationController
-  before_action :set_document, only: [:show, :edit, :update, :destroy]
+  before_action :set_document, only: [ :show, :edit, :update, :destroy ]
 
   def index
     @documents = Document.with_attached_file.order(created_at: :desc)

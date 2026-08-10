@@ -12,6 +12,6 @@ class AddProcessingStatusToDocumentsAndCreateFlashcards < ActiveRecord::Migratio
       t.timestamps
     end
 
-    add_index :flashcards, [:document_id, :position]
+    add_index :flashcards, [ :document_id, :position ]
   end
 end

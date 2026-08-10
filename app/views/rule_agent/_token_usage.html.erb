@@ -1,7 +1,9 @@
 <div id="token-usage" class="rule-agent__tokens">
   <span class="token-usage">
     Tokens &mdash; Input: <strong><%= tokens["input"] %></strong>
+    &nbsp; Cache read: <strong><%= tokens["cache_read"] %></strong>
+    &nbsp; Cache write: <strong><%= tokens["cache_write"] %></strong>
     &nbsp; Output: <strong><%= tokens["output"] %></strong>
-    &nbsp; Total: <strong><%= tokens["input"] + tokens["output"] %></strong>
+    &nbsp; Total: <strong><%= tokens.values.sum %></strong>
   </span>
 </div>

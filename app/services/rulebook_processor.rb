@@ -111,8 +111,12 @@ class RulebookProcessor
 
     @start_time    = Time.now
     @total_units   = records.sum { |r| r.completed? ? r.units.size : 0 }
-    @input_tokens  = 0
-    @output_tokens = 0
+    @input_tokens       = 0
+    @cache_read_tokens  = 0
+    @cache_write_tokens = 0
+    @output_tokens      = 0
+    @total_cost         = 0
+    @cost_complete      = true
 
     records.each_with_index { |record, i| process_chunk(record, i + 1, records.size) }
 
@@ -405,8 +409,7 @@ class RulebookProcessor
                  .with_temperature(0.1)
                  .with_schema(UnitSchema)
                  .ask(prompt_for(chunk_text))
-    @input_tokens  += response.input_tokens.to_i
-    @output_tokens += response.output_tokens.to_i
+    track_usage(response)
     parse_response(response.content)
   rescue JSON::ParserError => e
     warn "  [WARN] JSON parse failed: #{e.message}"
@@ -433,18 +436,24 @@ class RulebookProcessor
   end
 
   def print_token_summary
-    total = @input_tokens + @output_tokens
+    total = @input_tokens + @cache_read_tokens + @cache_write_tokens + @output_tokens
     puts "\nToken usage:"
-    puts "  Input:  #{@input_tokens.to_s.rjust(10)}"
-    puts "  Output: #{@output_tokens.to_s.rjust(10)}"
-    puts "  Total:  #{total.to_s.rjust(10)}"
+    puts "  Input:       #{@input_tokens.to_s.rjust(10)}"
+    puts "  Cache read:  #{@cache_read_tokens.to_s.rjust(10)}"
+    puts "  Cache write: #{@cache_write_tokens.to_s.rjust(10)}"
+    puts "  Output:      #{@output_tokens.to_s.rjust(10)}"
+    puts "  Total:       #{total.to_s.rjust(10)}"
+    puts "  Cost:        $#{format('%.4f', @total_cost)}" if @cost_complete
+  end
 
-    model_info = RubyLLM.models.find(@model)
-    if model_info&.input_price_per_million && model_info&.output_price_per_million
-      input_cost  = @input_tokens  * model_info.input_price_per_million  / 1_000_000.0
-      output_cost = @output_tokens * model_info.output_price_per_million / 1_000_000.0
-      puts "  Cost:   $#{format('%.4f', input_cost + output_cost)}"
-    end
+  def track_usage(response)
+    @input_tokens       += response.input_tokens.to_i
+    @cache_read_tokens  += response.cache_read_tokens.to_i
+    @cache_write_tokens += response.cache_write_tokens.to_i
+    @output_tokens      += response.output_tokens.to_i
+
+    cost = response.cost.total
+    cost ? @total_cost += cost : @cost_complete = false
   end
 
   BAR_WIDTH = 30

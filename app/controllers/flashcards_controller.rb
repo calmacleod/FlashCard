@@ -1,5 +1,5 @@
 class FlashcardsController < ApplicationController
-  before_action :set_document, except: [:index]
+  before_action :set_document, except: [ :index ]
 
   def index
     @flashcards_by_document = Document.joins(:flashcards).includes(:flashcards).distinct

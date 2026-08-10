@@ -67,9 +67,9 @@ class TextChunker
   # or [nil, nil] if no markers are present.
   def extract_page_range(content)
     page_numbers = content.scan(PAGE_MARKER).flatten.map(&:to_i)
-    return [nil, nil] if page_numbers.empty?
+    return [ nil, nil ] if page_numbers.empty?
 
-    [page_numbers.min, page_numbers.max]
+    [ page_numbers.min, page_numbers.max ]
   end
 
   def strip_page_markers(content)
@@ -146,6 +146,6 @@ class TextChunker
   end
 
   def tokens_to_words(token_count)
-    [(token_count * CHARS_PER_TOKEN / 6.0).ceil, 1].max
+    [ (token_count * CHARS_PER_TOKEN / 6.0).ceil, 1 ].max
   end
 end
